@@ -459,27 +459,33 @@ export default function EducationHome() {
 const courses = [
   {
     title: "FUN Kids (TK 4-6 Tahun)",
-    category: "Development",
+    category: "Mandarin Dasar",
+    description: "Belajar Mandarin melalui lagu dan permainan interaktif untuk usia dini.",
     duration: "24 hours",
     rating: "4.9",
     students: "12K",
     image: "/kindergarten-classroom-tk-teaching.jpg",
+    price: "150", // Added price
   },
   {
     title: "FUN Primary (SD 6-12 Tahun)",
-    category: "Data Science",
+    category: "Mandarin Sekolah",
+    description: "Fokus pada penguatan kosakata dan tata bahasa dengan metode kreatif.",
     duration: "32 hours",
     rating: "4.8",
     students: "8.5K",
     image: "/primary-school-classroom-learning.jpg",
+    price: "200", // Added price
   },
   {
     title: "FUN Conversation (SMP-Dewasa)",
-    category: "Design",
+    category: "Percakapan",
+    description: "Tingkatkan rasa percaya diri berbicara Mandarin untuk akademis & karir.",
     duration: "18 hours",
     rating: "4.9",
     students: "10K",
     image: "/conversation-class-teenagers-adults.jpg",
+    price: "250", // Added price
   },
 ]
 
