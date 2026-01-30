@@ -1,100 +1,478 @@
-import { BookOpen, Users, Award, TrendingUp, Clock, Star, ChevronRight } from "lucide-react"
+"use client"
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import Link from "next/link"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  BookOpen,
+  Clock,
+  Users,
+  Award,
+  TrendingUp,
+  Star,
+  ArrowRight,
+  Menu,
+  X,
+  MessageSquare,
+  Sparkles,
+  GraduationCap,
+  Play,
+  MapPin,
+  Phone,
+  Mail,
+} from "lucide-react"
 
-export default function EducationHome() {
+// Fun Mandarin Logo Component
+function FunMandarinLogo({ className = "" }: { className?: string }) {
   return (
-    <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Logo_Fun_Baru_2025_alpha-KKsP89t6IrAA3Bf8of3C5Nw05M61Kx.png" alt="Fun Mandarin" className="w-auto leading-10 h-56" />
-            </div>
+    <svg
+      viewBox="0 0 200 120"
+      className={className}
+      aria-label="Fun Mandarin Logo"
+    >
+      {/* F - Blue */}
+      <path
+        d="M10 20 Q10 10 20 10 L35 10 L35 18 L22 18 L22 45 L35 45 L35 53 L22 53 L22 90 L10 90 Z"
+        fill="#1e5fa8"
+      />
+      {/* U - Red */}
+      <path
+        d="M45 10 L57 10 L57 70 Q57 85 72 85 Q87 85 87 70 L87 10 L99 10 L99 72 Q99 95 72 95 Q45 95 45 72 Z"
+        fill="#e53935"
+      />
+      {/* N - Yellow/Gold */}
+      <path
+        d="M115 10 Q115 -5 130 10 L155 60 L155 10 L167 10 L167 90 L160 90 Q155 90 152 85 L127 35 L127 90 L115 90 Z"
+        fill="#f9a825"
+      />
+      {/* MANDARIN text */}
+      <text
+        x="10"
+        y="110"
+        fill="#1e5fa8"
+        fontSize="18"
+        fontWeight="500"
+        letterSpacing="8"
+        fontFamily="Plus Jakarta Sans, sans-serif"
+      >
+        MANDARIN
+      </text>
+    </svg>
+  )
+}
 
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="#courses" className="text-sm font-medium hover:text-primary transition-colors">
-                Courses
-              </Link>
-              <Link href="#about" className="text-sm font-medium hover:text-primary transition-colors">
-                About
-              </Link>
-              <Link href="#resources" className="text-sm font-medium hover:text-primary transition-colors">
-                Resources
-              </Link>
-              <Link href="#community" className="text-sm font-medium hover:text-primary transition-colors">
-                Community
-              </Link>
-            </div>
+// Google Reviews Data - manually extracted from screenshots (9 reviews for 3x3 grid)
+const googleReviews = [
+  {
+    name: "Lina Yoe",
+    role: "Local Guide",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Anak saya dyv kelas TKb 5 th, les di Fun belum 1 tahun Sudah banyak perkembangan, ucapan Pinyin nya tepat & jelas, tulisan hanzi jg ok. Materi pelajaran sangat menarik anak setiap hari semangat les fun, sampai 30 mnt sebelum naik pesawat masih sempat les online.",
+    avatar: "L",
+  },
+  {
+    name: "Welly Dharmawan",
+    role: "Parent",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Pembelajaran di Fun Mandarin sangat menyenangkan setiap anak saya pulang les dia happy dapat reward koin yg bisa ditukar untuk hadiah apapun termasuk Voucher indomaret dan google. Sejak anak saya les disini, banyak sekali perkembangan yang sangat pesat.",
+    avatar: "W",
+  },
+  {
+    name: "Natalia Fransisca",
+    role: "Local Guide",
+    rating: 5,
+    date: "a month ago",
+    text: "Sejak ikut les disini nilai ujian nya ga pernah dibawah 90. Happy juga anakku les disini. Laoshi nya juga baik baik. Terima kasih",
+    avatar: "N",
+  },
+  {
+    name: "Nicoleee",
+    role: "Student",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Tempatnya nyaman bangett terus Laoshinya juga baik baikk sama ngajarinnya sabar jadinya betah bngt disini",
+    avatar: "N",
+  },
+  {
+    name: "Paulus Juan",
+    role: "Student",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Aku cinta mandarin, lingkungan enak, let's join fun mandarin. Tempat di Citywalk bagus bnget, laoshinya baik",
+    avatar: "P",
+  },
+  {
+    name: "KEVIN SUSENO",
+    role: "Student",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Tempat lesnya keren, bersih terus gurunya juga supportive banget kak",
+    avatar: "K",
+  },
+  {
+    name: "Angelyna C",
+    role: "Student",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Les Mandarin di sini ngebantu banget. Cara ngajarnya jelas, ga bikin pusing, dan laoshinya sabar banget. Materinya pelan-pelan tapi masuk. Belajarnya juga ga kaku. Worth it sih menurut aku.",
+    avatar: "A",
+  },
+  {
+    name: "Winsen Andrean",
+    role: "Student",
+    rating: 5,
+    date: "2 weeks ago",
+    text: "Suasananya cocok untuk belajar dan nyaman. Laoshinya ramah dan materi yang disampaikan mudah dimengerti",
+    avatar: "W",
+  },
+  {
+    name: "Devina Joy",
+    role: "Parent",
+    rating: 5,
+    date: "a month ago",
+    text: "Anakku les di fun mandarin, byk kemajuan bgt dlm bahasa mandarinnya, tempatnya jg bersih dan kids friendly byk games2 pd saat les mandarin membuat anak bljr mandarin jd fun. Pkknya seru dehh dan makin pinter klo les di fun mandarin",
+    avatar: "D",
+  },
+]
 
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm">
-                Log In
-              </Button>
-              <Button size="sm">Sign Up</Button>
+// Course Data
+const courses = [
+  {
+    title: "FUN Kids",
+    subtitle: "TK 4-6 Tahun",
+    badge: "Mandarin Dasar",
+    description: "Belajar Mandarin melalui lagu dan permainan interaktif untuk usia dini.",
+    hours: 24,
+    rating: 4.9,
+    students: "12K",
+    price: 150,
+    color: "from-[#e53935]/10 to-[#e53935]/5",
+    accent: "#e53935",
+  },
+  {
+    title: "FUN Primary",
+    subtitle: "SD 6-12 Tahun",
+    badge: "Mandarin Sekolah",
+    description: "Fokus pada penguatan kosakata dan tata bahasa dengan metode kreatif.",
+    hours: 32,
+    rating: 4.8,
+    students: "8.5K",
+    price: 200,
+    color: "from-[#1e5fa8]/10 to-[#1e5fa8]/5",
+    accent: "#1e5fa8",
+  },
+  {
+    title: "FUN Conversation",
+    subtitle: "SMP-Dewasa",
+    badge: "Percakapan",
+    description: "Tingkatkan rasa percaya diri berbicara Mandarin untuk akademis & karir.",
+    hours: 18,
+    rating: 4.9,
+    students: "10K",
+    price: 250,
+    color: "from-[#f9a825]/10 to-[#f9a825]/5",
+    accent: "#f9a825",
+  },
+]
+
+// Features Data
+const features = [
+  {
+    icon: BookOpen,
+    title: "Program fleksibel",
+    description: "Setiap program kami disesuaikan dengan kebutuhan & kemampuan murid.",
+  },
+  {
+    icon: Users,
+    title: "Kelas kecil",
+    description: "Hanya 8-10 anak per kelas untuk perhatian maksimal.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Metode interaktif",
+    description: "Cara belajar yang menyenangkan dan tidak membosankan.",
+  },
+  {
+    icon: Award,
+    title: "Sistem reward",
+    description: "Motivasi anak untuk belajar lebih giat dan konsisten.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Online & offline",
+    description: "Fleksibilitas belajar di mana saja dengan kualitas sama.",
+  },
+  {
+    icon: Sparkles,
+    title: "Konten berkualitas",
+    description: "Materi selalu diperbarui sesuai kurikulum terbaru.",
+  },
+]
+
+// Timeline Data
+const timeline = [
+  {
+    year: "2014",
+    title: "Awal Perjalanan",
+    description: "FUN Mandarin didirikan dengan misi membuat pembelajaran Mandarin menjadi pengalaman yang menyenangkan.",
+  },
+  {
+    year: "2021",
+    title: "Pertumbuhan Pesat",
+    description: "Ratusan murid dari berbagai usia telah bergabung dan merasakan manfaat pembelajaran yang inovatif.",
+  },
+  {
+    year: "2026",
+    title: "Ekspansi Baru",
+    description: "Membuka cabang baru di Mall Citywalk Gajah Mada, Jakarta.",
+  },
+]
+
+// Review Card component with expand functionality
+function ReviewCard({ review }: { review: typeof googleReviews[0] }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const isLongText = review.text.length > 120
+
+  return (
+    <Card className="border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300">
+      <CardContent className="p-6">
+        {/* Stars */}
+        <div className="flex gap-1 mb-4">
+          {[...Array(review.rating)].map((_, i) => (
+            <Star key={i} className="h-5 w-5 fill-[#f9a825] text-[#f9a825]" />
+          ))}
+        </div>
+        
+        {/* Review Text */}
+        <div className="mb-6">
+          <p className={`text-sm text-muted-foreground leading-relaxed ${!isExpanded && isLongText ? 'line-clamp-3' : ''}`}>
+            {review.text}
+          </p>
+          {isLongText && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-sm font-medium text-[#1e5fa8] hover:text-[#1a5292] mt-2 transition-colors"
+            >
+              {isExpanded ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </div>
+
+        {/* Reviewer */}
+        <div className="flex items-center gap-3 pt-4 border-t border-border">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1e5fa8] to-[#1e5fa8]/70 flex items-center justify-center text-white font-semibold">
+            {review.avatar}
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">{review.name}</p>
+            <p className="text-xs text-muted-foreground">{review.role} - {review.date}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function Home() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+    }
+    setIsMenuOpen(false)
+  }
+
+  return (
+    <div className="min-h-screen bg-background font-sans antialiased">
+      {/* Header - Slick & Modern */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <div className="mx-4 mt-3">
+          <div className="max-w-6xl mx-auto bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg shadow-foreground/5">
+            <div className="flex items-center justify-between h-14 px-4 sm:px-6">
+              {/* Logo */}
+              <FunMandarinLogo className="h-9 w-auto" />
+
+              {/* Desktop Navigation - Centered */}
+              <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+                {[
+                  { label: "Courses", action: () => scrollToSection("courses") },
+                  { label: "About", action: () => scrollToSection("about") },
+                  { label: "Community", action: () => scrollToSection("testimonials") },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={item.action}
+                    className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-foreground/10 rounded-xl transition-all duration-200"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Mobile Menu Button */}
+              <button
+                className="md:hidden p-2 hover:bg-foreground/10 rounded-xl transition-colors"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+
+              {/* Spacer for desktop to balance the layout */}
+              <div className="hidden md:block w-9" />
             </div>
           </div>
         </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-muted/50 to-background">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                🎓 Welcome to the future of learning
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden mx-4 mt-2">
+            <div className="bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg p-4 space-y-1">
+              {[
+                { label: "Courses", action: () => scrollToSection("courses") },
+                { label: "About", action: () => scrollToSection("about") },
+                { label: "Community", action: () => scrollToSection("testimonials") },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.action}
+                  className="block w-full text-left px-4 py-3 text-sm font-medium hover:bg-foreground/5 rounded-xl transition-colors"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Hero Section - Modern & Clean */}
+      <section className="relative pt-28 pb-20 lg:pt-36 lg:pb-28 overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#1e5fa8]/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 -left-20 w-60 h-60 bg-[#e53935]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-40 h-40 bg-[#f9a825]/5 rounded-full blur-3xl" />
+        </div>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left Content */}
+            <div className="space-y-8">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 bg-[#1e5fa8]/10 text-[#1e5fa8] px-4 py-2 rounded-full text-sm font-semibold">
+                <GraduationCap className="h-4 w-4" />
+                Welcome to the future of learning
               </div>
-              <h1 className="text-4xl md:text-6xl font-bold leading-tight text-balance">
-                Learning Mandarin made <span className="text-red-500">Fun & Exciting!</span>
-              </h1>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Join thousands of learners worldwide in mastering new skills. From coding to design, business to
-                creative arts—your journey to excellence starts here.
+
+              {/* Heading */}
+              <div className="space-y-4">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-balance">
+                  Learning Mandarin made
+                </h1>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight">
+                  <span className="bg-gradient-to-r from-[#1e5fa8] via-[#e53935] to-[#f9a825] bg-clip-text text-transparent">
+                    Fun & Exciting!
+                  </span>
+                </h1>
+              </div>
+
+              {/* Description */}
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
+                Join thousands of learners mastering Mandarin with our innovative, 
+                interactive approach. From kids to adults—your journey to excellence starts here.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="text-base">
+
+              {/* CTA Buttons */}
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  size="lg"
+                  className="bg-[#1e5fa8] hover:bg-[#1a5292] text-white gap-2 rounded-xl text-base font-semibold px-6 h-12 shadow-lg shadow-[#1e5fa8]/25 hover:shadow-xl hover:shadow-[#1e5fa8]/30 transition-all duration-300"
+                  onClick={() => scrollToSection("courses")}
+                >
                   Browse Courses
-                  <ChevronRight className="ml-2 w-5 h-5" />
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" className="text-base bg-transparent">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 rounded-xl text-base font-semibold px-6 h-12 bg-transparent hover:bg-foreground/5 transition-all duration-300"
+                  onClick={() => scrollToSection("about")}
+                >
+                  <Play className="h-4 w-4" />
                   Learn More
                 </Button>
               </div>
-              <div className="flex items-center gap-8 pt-4">
-                <div>
-                  <div className="text-3xl font-bold">50K+</div>
-                  <div className="text-sm text-muted-foreground">Active Students</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">200+</div>
-                  <div className="text-sm text-muted-foreground">Program fleksibel</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">4.8</div>
-                  <div className="text-sm text-muted-foreground">Average Rating</div>
-                </div>
+
+              {/* Stats */}
+              <div className="flex flex-wrap gap-8 pt-4">
+                {[
+                  { value: "50K+", label: "Active Students" },
+                  { value: "200+", label: "Programs" },
+                  { value: "4.9", label: "Rating", icon: Star },
+                ].map((stat) => (
+                  <div key={stat.label} className="text-center">
+                    <p className="text-3xl font-bold text-foreground flex items-center gap-1">
+                      {stat.value}
+                      {stat.icon && <stat.icon className="h-5 w-5 fill-[#f9a825] text-[#f9a825]" />}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="relative">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
-                <img
-                  src="/diverse-students-learning-online-with-laptops-and-.jpg"
-                  alt="Students learning online"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-6 -left-6 bg-card border border-border rounded-xl p-4 shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Award className="w-6 h-6 text-primary" />
+            {/* Right Content - Modern Card */}
+            <div className="relative hidden lg:block">
+              <div className="relative">
+                {/* Main visual card */}
+                <div className="bg-gradient-to-br from-[#1e5fa8]/10 via-[#e53935]/5 to-[#f9a825]/10 rounded-3xl p-8 min-h-[480px] flex flex-col justify-between border border-border/50">
+                  {/* Top decorative elements */}
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#e53935]" />
+                      <div className="w-3 h-3 rounded-full bg-[#f9a825]" />
+                      <div className="w-3 h-3 rounded-full bg-[#1e5fa8]" />
+                    </div>
+                    <div className="bg-background/80 backdrop-blur rounded-xl px-3 py-1.5 text-xs font-medium">
+                      Live Class
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold">Certificate Ready</div>
-                    <div className="text-sm text-muted-foreground">Earn recognized credentials</div>
+
+                  {/* Center content */}
+                  <div className="text-center py-12">
+                    <div className="text-8xl font-bold text-[#1e5fa8]/20 select-none">
+                      你好
+                    </div>
+                    <p className="text-muted-foreground mt-2">Hello in Mandarin</p>
+                  </div>
+
+                  {/* Bottom card */}
+                  <div className="bg-background rounded-2xl p-5 shadow-xl shadow-foreground/5 flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1e5fa8] to-[#1e5fa8]/80 flex items-center justify-center flex-shrink-0">
+                      <Award className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-foreground text-lg">Certificate Ready</p>
+                      <p className="text-sm text-muted-foreground">Earn recognized credentials</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating badge */}
+                <div className="absolute -left-6 top-1/3 bg-background rounded-2xl p-4 shadow-xl shadow-foreground/10 border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#f9a825]/10 flex items-center justify-center">
+                      <Star className="h-5 w-5 fill-[#f9a825] text-[#f9a825]" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-foreground">4.9 Rating</p>
+                      <p className="text-xs text-muted-foreground">28 reviews</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -103,460 +481,271 @@ export default function EducationHome() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-90" />
-              <div className="text-3xl md:text-4xl font-bold">98%</div>
-              <div className="text-sm opacity-90 mt-1">Completion Rate</div>
-            </div>
-            <div className="text-center">
-              <Users className="w-8 h-8 mx-auto mb-2 opacity-90" />
-              <div className="text-3xl md:text-4xl font-bold">150+</div>
-              <div className="text-sm opacity-90 mt-1">Countries</div>
-            </div>
-            <div className="text-center">
-              <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-90" />
-              <div className="text-3xl md:text-4xl font-bold">500+</div>
-              <div className="text-sm opacity-90 mt-1">Courses</div>
-            </div>
-            <div className="text-center">
-              <Award className="w-8 h-8 mx-auto mb-2 opacity-90" />
-              <div className="text-3xl md:text-4xl font-bold">100K+</div>
-              <div className="text-sm opacity-90 mt-1">Certificates Issued</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Courses */}
-      <section id="courses" className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Popular Courses</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Explore our most popular courses taught by industry experts
+      {/* Courses Section - Modern Cards */}
+      <section id="courses" className="py-20 lg:py-28 bg-secondary/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Our Programs</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-3 mb-4">
+              Popular Courses
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Explore our most popular courses designed for different age groups and skill levels
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course, index) => (
-              <Card key={index} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-video relative bg-muted">
-                  <img
-                    src={course.image || "/placeholder.svg"}
-                    alt={course.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-4 left-4 bg-background/90 backdrop-blur px-3 py-1 rounded-full text-sm font-medium">
-                    {course.category}
+              <Card 
+                key={index} 
+                className="group overflow-hidden border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300 hover:-translate-y-1"
+              >
+                {/* Course Header */}
+                <div className={`relative h-44 bg-gradient-to-br ${course.color} p-6 flex flex-col justify-between`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground">{course.title}</h3>
+                      <p className="text-sm text-muted-foreground">{course.subtitle}</p>
+                    </div>
+                    <span 
+                      className="text-xs font-semibold px-3 py-1 rounded-full"
+                      style={{ backgroundColor: `${course.accent}15`, color: course.accent }}
+                    >
+                      {course.badge}
+                    </span>
+                  </div>
+                  <div className="text-5xl font-bold opacity-10 select-none" style={{ color: course.accent }}>
+                    {index === 0 ? "汉语" : index === 1 ? "学习" : "会话"}
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
-                  <div>
-                    <h3 className="font-bold text-xl mb-2 text-balance">{course.title}</h3>
-                    <p className="text-sm text-muted-foreground">{course.description}</p>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {course.duration}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 fill-primary text-primary" />
+
+                <CardContent className="p-6">
+                  <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{course.description}</p>
+                  
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-5">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
+                      {course.hours}h
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Star className="h-4 w-4 fill-[#f9a825] text-[#f9a825]" />
                       {course.rating}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4" />
                       {course.students}
-                    </div>
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between pt-2">
-                    {course.price && <div className="text-2xl font-bold">${course.price}</div>}
-                    <Button asChild>
-                      <Link href="/enroll">Book Now</Link>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <span className="text-2xl font-bold text-foreground">${course.price}</span>
+                    <Button 
+                      size="sm" 
+                      className="rounded-xl font-semibold text-white"
+                      style={{ backgroundColor: course.accent }}
+                    >
+                      Book Now
                     </Button>
                   </div>
-                </div>
+                </CardContent>
               </Card>
             ))}
-          </div>
-
-          <div className="text-center mt-12">
-            <Button variant="outline" size="lg">
-              View All Courses
-              <ChevronRight className="ml-2 w-5 h-5" />
-            </Button>
           </div>
         </div>
       </section>
 
-      {/* About Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          {/* Founder Story */}
-          <div className="mb-20">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-primary mb-8">Cerita FUN Mandarin</h2>
-              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Seorang pendidik Indonesia yang passionate tentang bahasa Mandarin menyadari bahwa banyak anak merasa tertarik untuk belajar, namun metode pengajaran tradisional membuat mereka bosan. Dia memutuskan untuk menciptakan cara yang benar-benar berbeda—dengan pendekatan interaktif, menyenangkan, dan penuh kreativitas—agar setiap anak dapat merasakan kegembiraan dalam mempelajari bahasa Mandarin.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <img 
-                    src="/fun-mandarin-founder-illustration.jpg" 
-                    alt="Founder of FUN Mandarin" 
-                    className="w-full max-w-md rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                <div className="border-l-4 border-primary pl-6">
-                  <div className="text-sm font-medium text-primary mb-1">2014</div>
-                  <h3 className="text-2xl font-bold mb-2">Awal Perjalanan</h3>
-                  <p className="text-muted-foreground">
-                    FUN Mandarin didirikan dengan tujuan sederhana namun kuat: membuat pembelajaran bahasa Mandarin menjadi pengalaman yang tak terlupakan dan penuh kegemiraan bagi setiap murid.
-                  </p>
-                </div>
-
-                <div className="border-l-4 border-primary pl-6">
-                  <div className="text-sm font-medium text-primary mb-1">2021</div>
-                  <h3 className="text-2xl font-bold mb-2">Pertumbuhan Pesat</h3>
-                  <p className="text-muted-foreground">
-                    Dengan metode pembelajaran yang inovatif, FUN Mandarin mulai berkembang pesat. Ratusan murid dari berbagai usia telah bergabung dan merasakan manfaat pembelajaran Mandarin yang menyenangkan.
-                  </p>
-                </div>
-
-                <div className="border-l-4 border-primary pl-6">
-                  <div className="text-sm font-medium text-primary mb-1">2026</div>
-                  <h3 className="text-2xl font-bold mb-2">Ekspansi Baru</h3>
-                  <p className="text-muted-foreground">
-                    FUN Mandarin buka cabang di Mall Citywalk Gajah Mada, membawa pembelajaran Mandarin yang menyenangkan lebih dekat kepada lebih banyak keluarga di Jakarta.
-                  </p>
-                </div>
-              </div>
-            </div>
+      {/* Why Choose Us Section - Modern Grid */}
+      <section className="py-20 lg:py-28 bg-background">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Why Us</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-3 mb-4">
+              Mengapa Harus FUN Mandarin?
+            </h2>
           </div>
 
-          {/* What Sets Us Apart */}
-          <div>
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold mb-6">Apa yang Membedakan Kami?</h2>
-              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Di FUN Mandarin, kami tidak hanya mengajar bahasa Mandarin—kami menciptakan pengalaman belajar yang mengubah cara murid melihat pembelajaran. Dengan pendekatan yang inovatif dan personal, kami memastikan setiap siswa tidak hanya memahami bahasa, tetapi juga mencintai proses belajarnya.
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  number: "500+",
-                  label: "Murid Puas",
-                  description: "Ribuan siswa telah mempercayai kami untuk perjalanan belajar Mandarin mereka"
-                },
-                {
-                  number: "95%",
-                  label: "Tingkat Kepuasan",
-                  description: "Mayoritas murid kami mengatakan belajar dengan FUN Mandarin menyenangkan dan efektif"
-                },
-                {
-                  number: "10+",
-                  label: "Tahun Pengalaman",
-                  description: "Tim kami memiliki dedikasi puluhan tahun dalam mengajar bahasa Mandarin"
-                }
-              ].map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-4xl font-bold text-primary mb-2">{stat.number}</div>
-                  <h3 className="text-lg font-bold mb-2">{stat.label}</h3>
-                  <p className="text-muted-foreground text-sm">{stat.description}</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map((feature, index) => (
+              <div 
+                key={index} 
+                className="group p-6 rounded-2xl bg-secondary/50 hover:bg-[#1e5fa8]/5 border border-transparent hover:border-[#1e5fa8]/20 transition-all duration-300"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#1e5fa8]/10 group-hover:bg-[#1e5fa8] flex items-center justify-center mb-4 transition-colors duration-300">
+                  <feature.icon className="h-6 w-6 text-[#1e5fa8] group-hover:text-white transition-colors duration-300" />
+                </div>
+                <h3 className="font-bold text-lg mb-2 text-foreground">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About / Story Section - Modern Timeline */}
+      <section id="about" className="py-20 lg:py-28 bg-secondary/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Our Story</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#1e5fa8] mt-3 mb-6">
+              Cerita FUN Mandarin
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Seorang pendidik Indonesia yang passionate tentang bahasa Mandarin menyadari bahwa
+              banyak anak merasa tertarik untuk belajar, namun metode pengajaran tradisional membuat
+              mereka bosan. Dia memutuskan untuk menciptakan cara yang benar-benar berbeda.
+            </p>
+          </div>
+
+          {/* Timeline */}
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-px bg-[#1e5fa8]/20 transform md:-translate-x-1/2" />
+              
+              {timeline.map((item, index) => (
+                <div key={index} className={`relative flex items-center mb-12 ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+                  {/* Content */}
+                  <div className={`w-full md:w-1/2 pl-8 md:pl-0 ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
+                    <div className="bg-background rounded-2xl p-6 shadow-lg shadow-foreground/5 border border-border/50">
+                      <span className="inline-block text-sm font-bold text-[#1e5fa8] bg-[#1e5fa8]/10 px-3 py-1 rounded-full mb-3">
+                        {item.year}
+                      </span>
+                      <h3 className="font-bold text-xl text-foreground mb-2">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Dot */}
+                  <div className="absolute left-0 md:left-1/2 w-4 h-4 bg-[#1e5fa8] rounded-full transform -translate-x-1/2 border-4 border-background" />
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Why Choose Us */}
-      <section id="about" className="py-20 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Mengapa Harus FUN Mandarin?</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-              </Card>
-            ))}
+          {/* What Makes Us Different */}
+          <div className="mt-20 text-center">
+            <h3 className="text-2xl sm:text-3xl font-bold text-foreground mb-6">
+              Apa yang Membedakan Kami?
+            </h3>
+            <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Di FUN Mandarin, kami tidak hanya mengajar bahasa Mandarin—kami menciptakan
+              pengalaman belajar yang mengubah cara murid melihat pembelajaran. Dengan pendekatan
+              yang inovatif dan personal, kami memastikan setiap siswa tidak hanya memahami bahasa,
+              tetapi juga mencintai proses belajarnya.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Students Say</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Hear from learners who have transformed their careers with our courses
+      {/* Reviews Section - Modern Cards */}
+      <section id="testimonials" className="py-20 lg:py-28 bg-background">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Testimonials</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-3 mb-4">
+              What Our Students Say
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Hear from learners who have transformed their Mandarin skills with us
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-muted-foreground mb-6 leading-relaxed">{testimonial.quote}</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
-                    {testimonial.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-semibold">{testimonial.name}</div>
-                    <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                  </div>
-                </div>
-              </Card>
+            {googleReviews.map((review, index) => (
+              <ReviewCard key={index} review={review} />
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h2 className="text-3xl md:text-5xl font-bold text-balance">Start Your Learning Journey Today</h2>
-            <p className="text-lg opacity-90 leading-relaxed">
-              Join our community of passionate learners and transform your career with expert-led courses.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" variant="secondary" className="text-base">
-                Get Started Free
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-base border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary bg-transparent"
-              >
-                Contact Us
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-10 w-auto" />
+          {/* Google Reviews Badge */}
+          <div className="mt-10 text-center">
+            <a 
+              href="https://www.google.com/maps/place/Fun+Mandarin/@-6.1454973,106.8104744,17z/data=!3m1!4b1!4m6!3m5!1s0x2e69f60617529637:0xfa9d7620dc9fd3fa!8m2!3d-6.1454973!4d106.8130493!16s%2Fg%2F11c47_zkqb?entry=ttu&g_ep=EgoyMDI2MDEyNy4wIKXMDSoASAFQAw%3D%3D" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 bg-foreground text-background rounded-full px-6 py-3 shadow-lg hover:scale-105 transition-transform"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              <div className="flex gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-[#f9a825] text-[#f9a825]" />
+                ))}
               </div>
-              <p className="text-sm text-muted-foreground">Empowering learners worldwide with quality education.</p>
+              <span className="text-sm font-bold">4.9</span>
+              <span className="text-sm opacity-80">from {googleReviews.length} Google reviews</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer - Modern & Clean */}
+      <footer className="bg-foreground text-background">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+            <div className="lg:col-span-2">
+              <FunMandarinLogo className="h-12 w-auto brightness-200 mb-4" />
+              <p className="text-background/60 text-sm max-w-sm leading-relaxed">
+                Learning Mandarin made Fun & Exciting! Join thousands of students worldwide 
+                in mastering one of the world's most spoken languages.
+              </p>
+              <div className="flex gap-3 mt-6">
+                <div className="w-10 h-10 rounded-xl bg-background/10 hover:bg-background/20 flex items-center justify-center transition-colors cursor-pointer">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-background/10 hover:bg-background/20 flex items-center justify-center transition-colors cursor-pointer">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427a4.902 4.902 0 011.153 1.772 4.902 4.902 0 011.772 1.153c.636.247 1.363.416 2.427.465 1.067.048 1.407.06 4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.153-1.772 4.902 4.902 0 01-1.772-1.153c-.636-.247-1.363-.416-2.427-.465-1.067-.048-1.407-.06-4.123-.06h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 4.041v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"/></svg>
+                </div>
+              </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Courses</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Web Development
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Data Science
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Design
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Business
-                  </Link>
-                </li>
-              </ul>
+              <h4 className="font-semibold mb-5 text-lg">Contact</h4>
+              <div className="space-y-3 text-sm text-background/60">
+                <p className="flex items-start gap-3">
+                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  Jl. Kemurnian IV No.35, Glodok, Kec. Taman Sari, Jakarta Barat
+                </p>
+                <p className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 flex-shrink-0" />
+                  (021) 6295371
+                </p>
+                <p className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  info@funmandarin.com
+                </p>
+              </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Careers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Terms of Service
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-foreground transition-colors">
-                    Community
-                  </Link>
-                </li>
-              </ul>
+              <h4 className="font-semibold mb-5 text-lg">Hours</h4>
+              <div className="space-y-3 text-sm text-background/60">
+                <div className="flex justify-between">
+                  <span>Mon - Fri</span>
+                  <span>9am - 6pm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Saturday</span>
+                  <span>9am - 4pm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Sunday</span>
+                  <span>Closed</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
-            <p>© 2025 Fun Mandarin. All rights reserved.</p>
+          <div className="mt-12 pt-8 border-t border-background/10 text-center text-sm text-background/40">
+            <p>2026 FUN Mandarin. All rights reserved.</p>
           </div>
         </div>
       </footer>
+
     </div>
   )
 }
-
-const courses = [
-  {
-    title: "FUN Kids (TK 4-6 Tahun)",
-    category: "Mandarin Dasar",
-    description: "Belajar Mandarin melalui lagu dan permainan interaktif untuk usia dini.",
-    duration: "24 hours",
-    rating: "4.9",
-    students: "12K",
-    image: "/kindergarten-classroom-tk-teaching.jpg",
-    price: "150", // Added price
-  },
-  {
-    title: "FUN Primary (SD 6-12 Tahun)",
-    category: "Mandarin Sekolah",
-    description: "Fokus pada penguatan kosakata dan tata bahasa dengan metode kreatif.",
-    duration: "32 hours",
-    rating: "4.8",
-    students: "8.5K",
-    image: "/primary-school-classroom-learning.jpg",
-    price: "200", // Added price
-  },
-  {
-    title: "FUN Conversation (SMP-Dewasa)",
-    category: "Percakapan",
-    description: "Tingkatkan rasa percaya diri berbicara Mandarin untuk akademis & karir.",
-    duration: "18 hours",
-    rating: "4.9",
-    students: "10K",
-    image: "/conversation-class-teenagers-adults.jpg",
-    price: "250", // Added price
-  },
-]
-
-const features = [
-  {
-    icon: BookOpen,
-    title: "Program fleksibel",
-    description: "Setiap program kami disesuaikan dengan kebutuhan & kemampuan murid, dari anak-anak hingga dewasa.",
-  },
-  {
-    icon: Clock,
-    title: "Kelas kecil",
-    description: "Hanya 8-10 anak per kelas, agar setiap murid mendapat perhatian maksimal.",
-  },
-  {
-    icon: Award,
-    title: "Metode pengajaran interaktif & menyenangkan",
-    description: "Kami mengajar dengan cara yang tidak membosankan, mendorong murid untuk aktif dan berkomunikasi nyata.",
-  },
-  {
-    icon: Users,
-    title: "Tugas rumah dengan reward",
-    description: "Setiap PR yang dikerjakan mendapatkan reward untuk memotivasi murid agar makin semangat belajar.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Kelas online & tatap muka",
-    description: "Fleksibilitas penuh bagi murid—Anda dapat memilih sesi daring atau hadir langsung di kelas sesuai kenyamanan dan kebutuhan.",
-  },
-  {
-    icon: Star,
-    title: "Quality Content",
-    description: "High-quality video lessons, projects, quizzes and downloadable resources.",
-  },
-]
-
-const testimonials = [
-  {
-    name: "Sarah Johnson",
-    role: "Web Developer",
-    quote:
-      "The Web Development Bootcamp changed my life! I went from knowing nothing about coding to landing my dream job in just 6 months. The instructors are amazing and the community is so supportive.",
-  },
-  {
-    name: "Michael Chen",
-    role: "Data Scientist",
-    quote:
-      "I've taken several online courses before, but this platform stands out. The Data Science course was comprehensive, practical, and the projects helped me build a strong portfolio.",
-  },
-  {
-    name: "Emily Rodriguez",
-    role: "UX Designer",
-    quote:
-      "As someone transitioning careers, I found the UI/UX Design Masterclass incredibly helpful. The course content is up-to-date and the certificate helped me get interviews.",
-  },
-  {
-    name: "David Kim",
-    role: "Marketing Manager",
-    quote:
-      "The Digital Marketing course provided exactly what I needed to grow my business. The strategies are practical and I saw results within weeks of implementing them.",
-  },
-  {
-    name: "Lisa Anderson",
-    role: "Mobile Developer",
-    quote:
-      "Learning React Native here was the best decision. The hands-on approach and real-world projects gave me the confidence to build and launch my own apps.",
-  },
-  {
-    name: "James Wilson",
-    role: "Entrepreneur",
-    quote:
-      "The Business Fundamentals course gave me the framework I needed to start my company. The instructors share valuable insights from their own experiences.",
-  },
-]
