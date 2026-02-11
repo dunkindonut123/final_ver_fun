@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,6 +22,7 @@ import {
   MapPin,
   Phone,
   Mail,
+  Gamepad2,
 } from "lucide-react"
 
 // Fun Mandarin Logo Component
@@ -140,11 +143,12 @@ const googleReviews = [
 // Course Data
 const courses = [
   {
+    id: "fun-kids",
     title: "FUN Kids",
     subtitle: "TK 4-6 Tahun",
     badge: "Mandarin Dasar",
     description: "Belajar Mandarin melalui lagu dan permainan interaktif untuk usia dini.",
-    hours: 24,
+    hours: 7,
     rating: 4.9,
     students: "12K",
     price: 150,
@@ -152,11 +156,12 @@ const courses = [
     accent: "#e53935",
   },
   {
+    id: "fun-primary",
     title: "FUN Primary",
     subtitle: "SD 6-12 Tahun",
     badge: "Mandarin Sekolah",
     description: "Fokus pada penguatan kosakata dan tata bahasa dengan metode kreatif.",
-    hours: 32,
+    hours: 1,
     rating: 4.8,
     students: "8.5K",
     price: 200,
@@ -164,6 +169,7 @@ const courses = [
     accent: "#1e5fa8",
   },
   {
+    id: "fun-conversation",
     title: "FUN Conversation",
     subtitle: "SMP-Dewasa",
     badge: "Percakapan",
@@ -299,9 +305,10 @@ export default function Home() {
               {/* Desktop Navigation - Centered */}
               <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
                 {[
-                  { label: "Courses", action: () => scrollToSection("courses") },
-                  { label: "About", action: () => scrollToSection("about") },
-                  { label: "Community", action: () => scrollToSection("testimonials") },
+                  { label: "Kursus", action: () => scrollToSection("courses") },
+                  { label: "Tentang", action: () => scrollToSection("about") },
+                  { label: "Berkompetisi", action: () => scrollToSection("games") },
+                  { label: "Komunitas", action: () => scrollToSection("testimonials") },
                 ].map((item) => (
                   <button
                     key={item.label}
@@ -332,11 +339,11 @@ export default function Home() {
         {isMenuOpen && (
           <div className="md:hidden mx-4 mt-2">
             <div className="bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg p-4 space-y-1">
-              {[
-                { label: "Courses", action: () => scrollToSection("courses") },
-                { label: "About", action: () => scrollToSection("about") },
-                { label: "Community", action: () => scrollToSection("testimonials") },
-              ].map((item) => (
+                {[
+                  { label: "Kursus", action: () => scrollToSection("courses") },
+                  { label: "Tentang", action: () => scrollToSection("about") },
+                  { label: "Komunitas", action: () => scrollToSection("testimonials") },
+                ].map((item) => (
                 <button
                   key={item.label}
                   onClick={item.action}
@@ -366,25 +373,22 @@ export default function Home() {
               {/* Badge */}
               <div className="inline-flex items-center gap-2 bg-[#1e5fa8]/10 text-[#1e5fa8] px-4 py-2 rounded-full text-sm font-semibold">
                 <GraduationCap className="h-4 w-4" />
-                Welcome to the future of learning
+                Selamat datang di masa depan pembelajaran
               </div>
 
               {/* Heading */}
               <div className="space-y-4">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-balance">
-                  Learning Mandarin made
-                </h1>
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight">
                   <span className="bg-gradient-to-r from-[#1e5fa8] via-[#e53935] to-[#f9a825] bg-clip-text text-transparent">
-                    Fun & Exciting!
+                    Belajar mandarin menjadi lebih asik bersama FunMandarin
                   </span>
                 </h1>
               </div>
 
               {/* Description */}
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Join thousands of learners mastering Mandarin with our innovative, 
-                interactive approach. From kids to adults—your journey to excellence starts here.
+                Bergabunglah dengan ratusan pelajar yang menguasai Mandarin dengan pendekatan inovatif dan interaktif kami. 
+                Dari anak-anak hingga dewasa—perjalanan Anda menuju keunggulan dimulai di sini.
               </p>
 
               {/* CTA Buttons */}
@@ -394,7 +398,7 @@ export default function Home() {
                   className="bg-[#1e5fa8] hover:bg-[#1a5292] text-white gap-2 rounded-xl text-base font-semibold px-6 h-12 shadow-lg shadow-[#1e5fa8]/25 hover:shadow-xl hover:shadow-[#1e5fa8]/30 transition-all duration-300"
                   onClick={() => scrollToSection("courses")}
                 >
-                  Browse Courses
+                  Jelajahi Kursus
                   <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button
@@ -404,15 +408,15 @@ export default function Home() {
                   onClick={() => scrollToSection("about")}
                 >
                   <Play className="h-4 w-4" />
-                  Learn More
+                  Pelajari Lebih Lanjut
                 </Button>
               </div>
 
               {/* Stats */}
               <div className="flex flex-wrap gap-8 pt-4">
                 {[
-                  { value: "50K+", label: "Active Students" },
-                  { value: "200+", label: "Programs" },
+                  { value: "500+", label: "Active Students" },
+                  { value: "3", label: "Programs" },
                   { value: "4.9", label: "Rating", icon: Star },
                 ].map((stat) => (
                   <div key={stat.label} className="text-center">
@@ -464,17 +468,7 @@ export default function Home() {
                 </div>
 
                 {/* Floating badge */}
-                <div className="absolute -left-6 top-1/3 bg-background rounded-2xl p-4 shadow-xl shadow-foreground/10 border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#f9a825]/10 flex items-center justify-center">
-                      <Star className="h-5 w-5 fill-[#f9a825] text-[#f9a825]" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-foreground">4.9 Rating</p>
-                      <p className="text-xs text-muted-foreground">28 reviews</p>
-                    </div>
-                  </div>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -485,72 +479,87 @@ export default function Home() {
       <section id="courses" className="py-20 lg:py-28 bg-secondary/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Our Programs</span>
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Program Kami</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-3 mb-4">
-              Popular Courses
+              Kursus Populer
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Explore our most popular courses designed for different age groups and skill levels
+              Jelajahi kursus paling populer kami yang dirancang untuk berbagai kelompok usia dan tingkat keahlian
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course, index) => (
-              <Card 
-                key={index} 
-                className="group overflow-hidden border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300 hover:-translate-y-1"
-              >
-                {/* Course Header */}
-                <div className={`relative h-44 bg-gradient-to-br ${course.color} p-6 flex flex-col justify-between`}>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-bold text-foreground">{course.title}</h3>
-                      <p className="text-sm text-muted-foreground">{course.subtitle}</p>
+              <Link key={index} href={`/course/${course.id}`} className="block h-full" scroll={true}>
+                <Card 
+                  className="group overflow-hidden border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300 hover:-translate-y-1 h-full cursor-pointer"
+                >
+                  {/* Course Header */}
+                  <div className={`relative h-44 bg-gradient-to-br ${course.color} p-6 flex flex-col justify-between`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">{course.title}</h3>
+                        <p className="text-sm text-muted-foreground">{course.subtitle}</p>
+                      </div>
+                      <span 
+                        className="text-xs font-semibold px-3 py-1 rounded-full"
+                        style={{ backgroundColor: `${course.accent}15`, color: course.accent }}
+                      >
+                        {course.badge}
+                      </span>
                     </div>
-                    <span 
-                      className="text-xs font-semibold px-3 py-1 rounded-full"
-                      style={{ backgroundColor: `${course.accent}15`, color: course.accent }}
-                    >
-                      {course.badge}
-                    </span>
-                  </div>
-                  <div className="text-5xl font-bold opacity-10 select-none" style={{ color: course.accent }}>
-                    {index === 0 ? "汉语" : index === 1 ? "学习" : "会话"}
-                  </div>
-                </div>
-
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{course.description}</p>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-5">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4" />
-                      {course.hours}h
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Star className="h-4 w-4 fill-[#f9a825] text-[#f9a825]" />
-                      {course.rating}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Users className="h-4 w-4" />
-                      {course.students}
-                    </span>
+                    <div className="text-5xl font-bold opacity-10 select-none" style={{ color: course.accent }}>
+                      {index === 0 ? "汉语" : index === 1 ? "学习" : "会话"}
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <span className="text-2xl font-bold text-foreground">${course.price}</span>
-                    <Button 
-                      size="sm" 
-                      className="rounded-xl font-semibold text-white"
-                      style={{ backgroundColor: course.accent }}
-                    >
-                      Book Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  <CardContent className="p-6 flex flex-col justify-between h-full">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{course.description}</p>
+                      
+                      
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                      
+                      <Button 
+                        size="sm" 
+                        className="rounded-xl font-semibold text-white"
+                        style={{ backgroundColor: course.accent }}
+                      >
+                        Lihat Detail
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Games CTA Section */}
+      <section id="games" className="py-20 lg:py-28 bg-secondary/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 bg-[#1e5fa8]/10 px-4 py-2 rounded-full mb-6">
+            <Gamepad2 className="h-4 w-4 text-[#1e5fa8]" />
+            <span className="text-sm font-medium text-[#1e5fa8]">Hanzi Type</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <span className="bg-gradient-to-r from-[#1e5fa8] via-[#e53935] to-[#f9a825] bg-clip-text text-transparent">
+              Kompetisi
+            </span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Berkompetisi dalam Permainan Mengetik Mandarin yang cepat. Uji kemampuan mengetik dan pengenalan karakter Anda
+          </p>
+          <a href="/games">
+            <Button className="bg-[#1e5fa8] hover:bg-[#1a5292] text-white gap-2 rounded-xl text-base font-semibold px-8 h-12 shadow-lg shadow-[#1e5fa8]/25">
+              <Gamepad2 className="h-4 w-4" />
+              Berkompetisi
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </a>
         </div>
       </section>
 
@@ -558,10 +567,13 @@ export default function Home() {
       <section className="py-20 lg:py-28 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Why Us</span>
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Mengapa Memilih Kami</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-3 mb-4">
-              Mengapa Harus FUN Mandarin?
+              Keunggulan FunMandarin
             </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Kami menyediakan pengalaman belajar terbaik dengan metode inovatif dan dukungan penuh untuk kesuksesan Anda
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -645,12 +657,12 @@ export default function Home() {
       <section id="testimonials" className="py-20 lg:py-28 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Testimonials</span>
+            <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Testimoni</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mt-3 mb-4">
-              What Our Students Say
+              Apa Kata Siswa Kami
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Hear from learners who have transformed their Mandarin skills with us
+              Dengarkan dari para pelajar yang telah mengubah keterampilan Mandarin mereka bersama kami
             </p>
           </div>
 
@@ -693,8 +705,7 @@ export default function Home() {
             <div className="lg:col-span-2">
               <FunMandarinLogo className="h-12 w-auto brightness-200 mb-4" />
               <p className="text-background/60 text-sm max-w-sm leading-relaxed">
-                Learning Mandarin made Fun & Exciting! Join thousands of students worldwide 
-                in mastering one of the world's most spoken languages.
+                Belajar Mandarin menjadi Seru & Menyenangkan! Gabunglah bersama ratusan pelajar dalam menguasai salah satu bahasa yang paling sering digunakan di dunia.
               </p>
               <div className="flex gap-3 mt-6">
                 <div className="w-10 h-10 rounded-xl bg-background/10 hover:bg-background/20 flex items-center justify-center transition-colors cursor-pointer">

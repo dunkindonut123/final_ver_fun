@@ -1,0 +1,77 @@
+export const courseDetails: Record<string, any> = {
+  'fun-kids': {
+    id: 'fun-kids',
+    title: 'FUN Kids',
+    subtitle: 'TK 4-6 Tahun',
+    badge: 'Mandarin Dasar',
+    description: 'Belajar Mandarin melalui lagu dan permainan interaktif untuk usia dini.',
+    price: 150,
+    accent: '#e53935',
+    hours: 7,
+    rating: 4.9,
+    students: '12K',
+    fullDescription: 'Program FUN Kids dirancang khusus untuk anak-anak usia dini (4-6 tahun) yang baru memulai perjalanan belajar Mandarin. Melalui lagu, permainan, dan aktivitas interaktif, anak-anak akan mengenal karakter dasar Mandarin dengan cara yang menyenangkan dan tidak membosankan.',
+    features: [
+      'Buku pembelajaran eksklusif (in-house)',
+      'Kurikulum berbasis Singapura',
+      'Metode pembelajaran interaktif dan menyenangkan',
+      'Pendekatan belajar berbasis permainan',
+      'Laporan perkembangan berkala dan sertifikat',
+    ],
+    curriculum: [
+      'Bulan 1-2: Pengenalan huruf Mandarin dan nada',
+      'Bulan 3-4: Kosakata sehari-hari (keluarga, warna, hewan)',
+      'Bulan 5-6: Percakapan sederhana dan kebiasaan',
+    ]
+  },
+  'fun-primary': {
+    id: 'fun-primary',
+    title: 'FUN Primary',
+    subtitle: 'SD 6-12 Tahun',
+    badge: 'Mandarin Sekolah',
+    description: 'Fokus pada penguatan kosakata dan tata bahasa dengan metode kreatif.',
+    price: 200,
+    accent: '#1e5fa8',
+    hours: 12,
+    rating: 4.8,
+    students: '8.5K',
+    fullDescription: 'Program FUN Primary adalah lanjutan yang ideal untuk anak sekolah dasar. Kami fokus pada penguatan kosakata, tata bahasa, dan kemampuan membaca yang lebih solid dengan metode pembelajaran yang kreatif dan menyenangkan.',
+    features: [
+      'Materi pembelajaran sesuai kurikulum Singapura',
+      'Laporan perkembangan berkala dan sertifikat',
+      'Fasilitas pembelajaran digital (PPT & video)',
+      'Komunitas pembelajaran interaktif',
+      'Akses konten pembelajaran seumur hidup',
+    ],
+    curriculum: [
+      'Bulan 1-3: Penguatan dasar Mandarin dan pembentukan karakter',
+      'Bulan 4-6: Percakapan praktis dan pemahaman bacaan',
+      'Bulan 7-12: Persiapan untuk ujian dan kemahiran lanjutan',
+    ]
+  },
+  'fun-conversation': {
+    id: 'fun-conversation',
+    title: 'FUN Conversation',
+    subtitle: 'SMP-Dewasa',
+    badge: 'Percakapan',
+    description: 'Tingkatkan rasa percaya diri berbicara Mandarin untuk akademis & karir.',
+    price: 250,
+    accent: '#f9a825',
+    hours: 18,
+    rating: 4.9,
+    students: '10K',
+    fullDescription: 'Program FUN Conversation dirancang untuk mereka yang ingin meningkatkan kemampuan berbicara Mandarin dengan percaya diri. Cocok untuk akademis, profesional, dan mereka yang ingin berkomunikasi lebih lancar dalam situasi kehidupan nyata.',
+    features: [
+      'Fokus pada pengucapan dan intonasi yang tepat',
+      'Skenario percakapan kehidupan nyata',
+      'Latihan speaking intensif dengan native speaker',
+      'Umpan balik real-time dan koreksi',
+      'Sertifikat kemampuan speaking',
+    ],
+    curriculum: [
+      'Bulan 1-2: Percakapan dasar dan frasa umum',
+      'Bulan 3-4: Percakapan tingkat menengah di berbagai situasi',
+      'Bulan 5-6: Percakapan lanjutan dan presentasi',
+    ]
+  },
+}

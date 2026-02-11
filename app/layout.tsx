@@ -10,8 +10,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Fun Mandarin - Learning Mandarin made Fun & Exciting!',
-  description: 'Join thousands of learners worldwide in mastering Mandarin. Fun, interactive, and effective learning for all ages.',
+  title: 'Fun Mandarin - Belajar Mandarin Menjadi Seru & Menyenangkan!',
+  description: 'Gabunglah dengan ratusan pelajar dalam menguasai bahasa Mandarin.',
   generator: 'v0.app',
   icons: {
     icon: [
