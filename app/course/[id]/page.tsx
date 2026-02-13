@@ -111,7 +111,7 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
                 variant="outline"
                 className="w-full font-semibold rounded-xl bg-sidebar-accent"
               >
-                <a href="https://wa.me/62857199966983?text=Saya%20ingin%20menanyakan%20tentang%20kursus%20FunMandarin" target="_blank" rel="noopener noreferrer" className="w-full">
+                <a href="https://wa.me/6285719996983?text=Saya%20ingin%20menanyakan%20tentang%20kursus%20FunMandarin" target="_blank" rel="noopener noreferrer" className="w-full">
                   Tanya di WhatsApp
                 </a>
               </Button>

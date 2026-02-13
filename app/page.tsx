@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-
+import Image from 'next/image'
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,39 +28,13 @@ import {
 // Fun Mandarin Logo Component
 function FunMandarinLogo({ className = "" }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 200 120"
+    <Image 
+      src="/images/logofunmanda.png" 
+      alt="Fun Mandarin Logo"
+      width={200}
+      height={200}
       className={className}
-      aria-label="Fun Mandarin Logo"
-    >
-      {/* F - Blue */}
-      <path
-        d="M10 20 Q10 10 20 10 L35 10 L35 18 L22 18 L22 45 L35 45 L35 53 L22 53 L22 90 L10 90 Z"
-        fill="#1e5fa8"
-      />
-      {/* U - Red */}
-      <path
-        d="M45 10 L57 10 L57 70 Q57 85 72 85 Q87 85 87 70 L87 10 L99 10 L99 72 Q99 95 72 95 Q45 95 45 72 Z"
-        fill="#e53935"
-      />
-      {/* N - Yellow/Gold */}
-      <path
-        d="M115 10 Q115 -5 130 10 L155 60 L155 10 L167 10 L167 90 L160 90 Q155 90 152 85 L127 35 L127 90 L115 90 Z"
-        fill="#f9a825"
-      />
-      {/* MANDARIN text */}
-      <text
-        x="10"
-        y="110"
-        fill="#1e5fa8"
-        fontSize="18"
-        fontWeight="500"
-        letterSpacing="8"
-        fontFamily="Plus Jakarta Sans, sans-serif"
-      >
-        MANDARIN
-      </text>
-    </svg>
+    />
   )
 }
 
@@ -154,6 +128,7 @@ const courses = [
     price: 150,
     color: "from-[#e53935]/10 to-[#e53935]/5",
     accent: "#e53935",
+    image: "/images/funkids.jpg",
   },
   {
     id: "fun-primary",
@@ -167,6 +142,7 @@ const courses = [
     price: 200,
     color: "from-[#1e5fa8]/10 to-[#1e5fa8]/5",
     accent: "#1e5fa8",
+    image: "/images/funprimary.jpg",
   },
   {
     id: "fun-conversation",
@@ -180,6 +156,7 @@ const courses = [
     price: 250,
     color: "from-[#f9a825]/10 to-[#f9a825]/5",
     accent: "#f9a825",
+    image: "/images/funconversation.jpg",
   },
 ]
 
@@ -298,12 +275,13 @@ export default function Home() {
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="mx-4 mt-3">
           <div className="max-w-6xl mx-auto bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg shadow-foreground/5">
-            <div className="flex items-center justify-between h-14 px-4 sm:px-6">
+            <div className="flex items-center justify-between h-17 px-4 sm:px-6">
               {/* Logo */}
-              <FunMandarinLogo className="h-9 w-auto" />
 
-              {/* Desktop Navigation - Centered */}
-              <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+              <FunMandarinLogo className="h-16 w-auto" />
+
+              {/* Desktop Navigation - Flex with Logo */}
+              <nav className="hidden md:flex items-center gap-1 ml-6 flex-1">
                 {[
                   { label: "Kursus", action: () => scrollToSection("courses") },
                   { label: "Tentang", action: () => scrollToSection("about") },
@@ -446,15 +424,16 @@ export default function Home() {
                       Live Class
                     </div>
                   </div>
-
-                  {/* Center content */}
-                  <div className="text-center py-12">
-                    <div className="text-8xl font-bold text-[#1e5fa8]/20 select-none">
-                      你好
-                    </div>
-                    <p className="text-muted-foreground mt-2">Hello in Mandarin</p>
+                  
+                  {/* Center content - Image fills the space */}
+                  <div className="flex-1 relative rounded-2xl overflow-hidden my-4">
+                    <img 
+                      src="/images/heropict.jpg" 
+                      alt="test image" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-
+                  
                   {/* Bottom card */}
                   <div className="bg-background rounded-2xl p-5 shadow-xl shadow-foreground/5 flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1e5fa8] to-[#1e5fa8]/80 flex items-center justify-center flex-shrink-0">
@@ -462,13 +441,10 @@ export default function Home() {
                     </div>
                     <div>
                       <p className="font-bold text-foreground text-lg">Certificate Ready</p>
-                      <p className="text-sm text-muted-foreground">Earn recognized credentials</p>
+                      <p className="text-sm text-muted-foreground">Dapatkan kredensial yang diakui</p>
                     </div>
                   </div>
                 </div>
-
-                {/* Floating badge */}
-                
               </div>
             </div>
           </div>
@@ -495,33 +471,36 @@ export default function Home() {
                   className="group overflow-hidden border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300 hover:-translate-y-1 h-full cursor-pointer"
                 >
                   {/* Course Header */}
-                  <div className={`relative h-44 bg-gradient-to-br ${course.color} p-6 flex flex-col justify-between`}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-bold text-foreground">{course.title}</h3>
-                        <p className="text-sm text-muted-foreground">{course.subtitle}</p>
-                      </div>
-                      <span 
-                        className="text-xs font-semibold px-3 py-1 rounded-full"
-                        style={{ backgroundColor: `${course.accent}15`, color: course.accent }}
-                      >
-                        {course.badge}
-                      </span>
-                    </div>
-                    <div className="text-5xl font-bold opacity-10 select-none" style={{ color: course.accent }}>
-                      {index === 0 ? "汉语" : index === 1 ? "学习" : "会话"}
-                    </div>
+                  <div
+                    className="relative h-60 p-25 flex flex-col justify-between"
+                    style={{
+                      backgroundImage: `url(${course.image})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  >
+                    {/* Optionally add overlay text/icon here if needed */}
                   </div>
 
                   <CardContent className="p-6 flex flex-col justify-between h-full">
                     <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground">{course.title}</h3>
+                          <p className="text-sm text-muted-foreground">{course.subtitle}</p>
+                        </div>
+                        <span 
+                          className="text-xs font-semibold px-3 py-1 rounded-full"
+                          style={{ backgroundColor: `${course.accent}15`, color: course.accent }}
+                        >
+                          {course.badge}
+                        </span>
+                      </div>
+                      <hr className="my-2 border-border" />
                       <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{course.description}</p>
-                      
-                      
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-border">
-                      
                       <Button 
                         size="sm" 
                         className="rounded-xl font-semibold text-white"
@@ -600,7 +579,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <span className="text-sm font-semibold text-[#1e5fa8] tracking-wide uppercase">Our Story</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#1e5fa8] mt-3 mb-6">
+            <h2 className="text-3xl sm:text-4xl font-bold text-black mt-3 mb-6">
               Cerita FUN Mandarin
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
@@ -617,10 +596,10 @@ export default function Home() {
               <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-px bg-[#1e5fa8]/20 transform md:-translate-x-1/2" />
               
               {timeline.map((item, index) => (
-                <div key={index} className={`relative flex items-center mb-12 ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+                <div key={index} className="relative flex items-center mb-12 md:flex-row">
                   {/* Content */}
-                  <div className={`w-full md:w-1/2 pl-8 md:pl-0 ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
-                    <div className="bg-background rounded-2xl p-6 shadow-lg shadow-foreground/5 border border-border/50">
+                  <div className="w-full md:w-1/2 pl-8 md:pl-0 md:pr-12 md:text-right">
+                    <div className="bg-background rounded-2xl p-10 shadow-lg shadow-foreground/5 border border-border/50">
                       <span className="inline-block text-sm font-bold text-[#1e5fa8] bg-[#1e5fa8]/10 px-3 py-1 rounded-full mb-3">
                         {item.year}
                       </span>
@@ -630,9 +609,21 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  
                   {/* Dot */}
                   <div className="absolute left-0 md:left-1/2 w-4 h-4 bg-[#1e5fa8] rounded-full transform -translate-x-1/2 border-4 border-background" />
+                  {index === 1 && (
+                    <div className="hidden md:block md:w-1/2 md:pl-12">
+                      <Image 
+                        src="/images/aboutpict.png" 
+                        alt="Timeline Visual" 
+                        width={0} 
+                        height={0} 
+                        sizes="100vw"
+                        className="w-full h-full object-cover rounded-2xl shadow-lg border border-border/50"
+                        style={{ minHeight: '100%', minWidth: '100%' }}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

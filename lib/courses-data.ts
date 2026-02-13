@@ -1,6 +1,7 @@
 export const courseDetails: Record<string, any> = {
   'fun-kids': {
     id: 'fun-kids',
+    image: '/images/funkids.jpg',
     title: 'FUN Kids',
     subtitle: 'TK 4-6 Tahun',
     badge: 'Mandarin Dasar',
@@ -26,6 +27,7 @@ export const courseDetails: Record<string, any> = {
   },
   'fun-primary': {
     id: 'fun-primary',
+    image: '/images/funprimary.jpg',
     title: 'FUN Primary',
     subtitle: 'SD 6-12 Tahun',
     badge: 'Mandarin Sekolah',
@@ -51,6 +53,7 @@ export const courseDetails: Record<string, any> = {
   },
   'fun-conversation': {
     id: 'fun-conversation',
+    image: '/images/funprimary.jpg',
     title: 'FUN Conversation',
     subtitle: 'SMP-Dewasa',
     badge: 'Percakapan',
