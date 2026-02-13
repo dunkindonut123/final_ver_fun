@@ -29,7 +29,7 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
       {/* Header */}
       <div className="bg-gradient-to-r from-[#1e5fa8]/10 to-[#f9a825]/10 py-8 border-b border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/#courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
+          <Link href="/#courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1e5fa8] mb-4">
             <ArrowLeft className="w-4 h-4" />
             Kembali ke Kursus
           </Link>
@@ -109,11 +109,9 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
 
               <Button
                 variant="outline"
-                className="w-full font-semibold rounded-xl bg-sidebar-accent"
+                className="w-full font-semibold rounded-xl bg-sidebar-accent flex items-center justify-center"
               >
-                <a href="https://wa.me/6285719996983?text=Saya%20ingin%20menanyakan%20tentang%20kursus%20FunMandarin" target="_blank" rel="noopener noreferrer" className="w-full">
-                  Tanya di WhatsApp
-                </a>
+                Tanya di WhatsApp
               </Button>
 
               {/* Course Info */}

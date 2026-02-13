@@ -18,19 +18,10 @@ export default function GamesPage() {
       <div className="w-full max-w-4xl space-y-12">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/">
-            <Button variant="ghost" size="icon" className="hover:bg-foreground/10">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <Link href="/" className="flex items-center gap-2 text-lg text-black hover:text-[#1e5fa8] mb-4">
+            <ArrowLeft className="h-5 w-5" />
+            Kembali ke beranda
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              <span className="bg-gradient-to-r from-[#1e5fa8] via-[#e53935] to-[#f9a825] bg-clip-text text-transparent">
-                Kompetisi
-              </span>
-            </h1>
-            
-          </div>
         </div>
 
         {/* Level Selection */}

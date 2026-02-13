@@ -15,7 +15,7 @@ interface WordState {
   userInput: string
 }
 
-const GAME_DURATION = 300 // 1 minute in seconds
+const GAME_DURATION = 10 
 
 interface TypingGameProps {
   level: HSKLevel
@@ -84,10 +84,6 @@ export function TypingGame({ level }: TypingGameProps) {
     if (gameState === "finished") return
 
     setInput(value)
-    setStats((prev) => ({
-      ...prev,
-      totalKeystrokes: prev.totalKeystrokes + 1,
-    }))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -122,6 +118,7 @@ export function TypingGame({ level }: TypingGameProps) {
         correctKeystrokes: isCorrect
           ? prev.correctKeystrokes + input.trim().length
           : prev.correctKeystrokes,
+        totalKeystrokes: prev.totalKeystrokes + 1,
       }))
 
       const newIndex = currentIndex + 1
@@ -165,12 +162,6 @@ export function TypingGame({ level }: TypingGameProps) {
     return Math.round((stats.correctWords / totalAttempted) * 100)
   }
 
-  const calculateScore = () => {
-    const wpm = calculateWPM()
-    const accuracy = calculateAccuracy()
-    return Math.round(wpm * (accuracy / 100))
-  }
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -200,19 +191,15 @@ export function TypingGame({ level }: TypingGameProps) {
             </div>
             <div className="flex justify-between text-foreground">
               <span>Kata Benar</span>
-              <span className="text-correct">{stats.correctWords}</span>
+              <span className="text-green-600">{stats.correctWords}</span>
             </div>
             <div className="flex justify-between text-foreground">
               <span>Kata Salah</span>
-              <span className="text-incorrect">{stats.incorrectWords}</span>
+              <span className="text-red-600">{stats.incorrectWords}</span>
             </div>
             <div className="flex justify-between text-foreground">
               <span>Total Karakter</span>
               <span>{stats.totalKeystrokes}</span>
-            </div>
-            <div className="flex justify-between text-foreground font-semibold pt-2 border-t border-border">
-              <span>Skor Akhir</span>
-              <span className="text-primary">{calculateScore()}</span>
             </div>
           </div>
 
