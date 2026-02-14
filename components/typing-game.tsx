@@ -15,7 +15,7 @@ interface WordState {
   userInput: string
 }
 
-const GAME_DURATION = 300
+const GAME_DURATION = 120
 
 interface TypingGameProps {
   level: HSKLevel
