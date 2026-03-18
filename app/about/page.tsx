@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 
 export const metadata = {
   title: "About Fun Mandarin - Learn Chinese Language",
@@ -13,7 +14,13 @@ export default function AboutPage() {
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-8 w-auto" />
+            <Image
+              src="/images/fun-logo-00000.png"
+              alt="Fun Mandarin"
+              width={140}
+              height={32}
+              className="h-8 w-auto"
+            />
           </Link>
           <Link href="/">
             <Button variant="outline">Back to Home</Button>
@@ -94,9 +101,11 @@ export default function AboutPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="flex justify-center">
             <div className="relative">
-              <img 
+              <Image
                 src="/aboutpict.png" 
                 alt="Founder of FUN Mandarin" 
+                width={640}
+                height={640}
                 className="w-full max-w-md rounded-lg"
               />
             </div>
@@ -181,7 +190,13 @@ export default function AboutPage() {
       <footer className="bg-secondary/20 border-t border-border py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-8 w-auto mb-4 md:mb-0" />
+            <Image
+              src="/images/fun-logo-00000.png"
+              alt="Fun Mandarin"
+              width={140}
+              height={32}
+              className="h-8 w-auto mb-4 md:mb-0"
+            />
             <p className="text-muted-foreground text-sm">© 2026 FUN Mandarin. All rights reserved.</p>
           </div>
         </div>

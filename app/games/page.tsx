@@ -24,11 +24,6 @@ export default function GamesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {([1, 2] as HSKLevel[]).map((level) => {
               const info = hskLevelInfo[level]
-              const colors = [
-                { bg: "from-blue-500 to-blue-600", badge: "bg-blue-100 text-blue-700" },
-                { bg: "from-green-500 to-green-600", badge: "bg-green-100 text-green-700" },
-              ]
-              const color = colors[level - 1]
 
               return (
                 <Link
@@ -42,8 +37,6 @@ export default function GamesPage() {
                         {info.name}
                       </h3>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${color.badge}`}>
-                    </span>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">{info.description}</p>
                   <div className="inline-flex items-center gap-2 text-sm font-medium text-[#1e5fa8] group-hover:gap-3 transition-all">
