@@ -95,7 +95,7 @@ export default function AboutPage() {
           <div className="flex justify-center">
             <div className="relative">
               <img 
-                src="/fun-mandarin-founder-illustration.jpg" 
+                src="/aboutpict.png" 
                 alt="Founder of FUN Mandarin" 
                 className="w-full max-w-md rounded-lg"
               />
@@ -137,32 +137,6 @@ export default function AboutPage() {
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             Di FUN Mandarin, kami tidak hanya mengajar bahasa Mandarin—kami menciptakan pengalaman belajar yang mengubah cara murid melihat pembelajaran. Dengan pendekatan yang inovatif dan personal, kami memastikan setiap siswa tidak hanya memahami bahasa, tetapi juga mencintai proses belajarnya.
           </p>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {[
-            {
-              number: "500+",
-              label: "Murid Puas",
-              description: "Ribuan siswa telah mempercayai kami untuk perjalanan belajar Mandarin mereka"
-            },
-            {
-              number: "95%",
-              label: "Tingkat Kepuasan",
-              description: "Mayoritas murid kami mengatakan belajar dengan FUN Mandarin menyenangkan dan efektif"
-            },
-            {
-              number: "10+",
-              label: "Tahun Pengalaman",
-              description: "Tim kami memiliki dedikasi puluhan tahun dalam mengajar bahasa Mandarin"
-            }
-          ].map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">{stat.number}</div>
-              <h3 className="text-lg font-bold mb-2">{stat.label}</h3>
-              <p className="text-muted-foreground text-sm">{stat.description}</p>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -208,7 +182,7 @@ export default function AboutPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-8 w-auto mb-4 md:mb-0" />
-            <p className="text-muted-foreground text-sm">© 2024 FUN Mandarin. All rights reserved.</p>
+            <p className="text-muted-foreground text-sm">© 2026 FUN Mandarin. All rights reserved.</p>
           </div>
         </div>
       </footer>

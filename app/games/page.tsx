@@ -1,18 +1,8 @@
-"use client"
-
-import { useRouter } from "next/navigation"
 import { type HSKLevel, hskLevelInfo } from "@/lib/hanzi-data"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Gamepad2 } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 
 export default function GamesPage() {
-  const router = useRouter()
-
-  const handleLevelSelect = (level: HSKLevel) => {
-    router.push(`/game/${level}`)
-  }
-
   return (
     <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-4xl space-y-12">
@@ -41,9 +31,9 @@ export default function GamesPage() {
               const color = colors[level - 1]
 
               return (
-                <button
+                <Link
                   key={level}
-                  onClick={() => handleLevelSelect(level)}
+                  href={`/game/${level}`}
                   className="group p-6 rounded-xl border border-border bg-card hover:border-foreground/20 hover:shadow-lg transition-all duration-200 text-left"
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -60,7 +50,7 @@ export default function GamesPage() {
                     <span>Start Game</span>
                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                   </div>
-                </button>
+                </Link>
               )
             })}
           </div>
