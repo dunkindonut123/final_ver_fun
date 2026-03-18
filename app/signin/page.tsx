@@ -34,8 +34,7 @@ export default function LoginPage() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Placeholder behavior until auth backend is connected.
-      // Keep user on current auth flow instead of failing compilation with missing DB client.
-      router.push("/");
+      router.push("/student/dashboard");
     } catch {
       setError("An unexpected error occurred");
     } finally {
