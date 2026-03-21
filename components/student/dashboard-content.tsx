@@ -55,26 +55,40 @@ export function StudentDashboardContent({
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <BookOpen className="h-5 w-5 text-primary" />
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-36 -right-20 h-80 w-80 rounded-full bg-[#1e5fa8]/8 blur-3xl" />
+        <div className="absolute top-1/3 -left-20 h-64 w-64 rounded-full bg-[#e53935]/8 blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 h-56 w-56 rounded-full bg-[#f9a825]/8 blur-3xl" />
+      </div>
+
+      <header className="relative z-10 px-4 pt-3">
+        <div className="mx-auto max-w-6xl rounded-2xl border border-white/20 bg-background/70 shadow-lg shadow-foreground/5 backdrop-blur-2xl">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1e5fa8]/10">
+                <BookOpen className="h-5 w-5 text-[#1e5fa8]" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-card-foreground">Fun Mandarin</h1>
+                <p className="text-sm text-muted-foreground">Student Portal</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-card-foreground">HSK Learning</h1>
-              <p className="text-sm text-muted-foreground">Student Portal</p>
-            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="rounded-xl bg-background/70"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="relative z-10 mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground">
             Welcome back, {student.name}!
@@ -85,7 +99,7 @@ export function StudentDashboardContent({
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="col-span-full lg:col-span-1">
+          <Card className="col-span-full rounded-2xl border-0 shadow-lg shadow-foreground/5 lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-card-foreground">
                 Current HSK Level
@@ -94,7 +108,7 @@ export function StudentDashboardContent({
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e5fa8] text-white">
                   <span className="text-2xl font-bold">
                     {student.current_hsk_level}
                   </span>
@@ -109,7 +123,7 @@ export function StudentDashboardContent({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-2xl border-0 shadow-lg shadow-foreground/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-card-foreground">Current Bab</CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -119,7 +133,7 @@ export function StudentDashboardContent({
                 <span className="text-4xl font-bold text-card-foreground">
                   {student.current_bab}
                 </span>
-                <Badge variant="secondary">Chapter</Badge>
+                <Badge variant="secondary" className="rounded-full">Chapter</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 You are currently studying Chapter {student.current_bab}
@@ -127,7 +141,7 @@ export function StudentDashboardContent({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-2xl border-0 shadow-lg shadow-foreground/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-card-foreground">Current Pertemuan</CardTitle>
               <GraduationCap className="h-4 w-4 text-muted-foreground" />
@@ -137,7 +151,7 @@ export function StudentDashboardContent({
                 <span className="text-4xl font-bold text-card-foreground">
                   {student.current_pertemuan}
                 </span>
-                <Badge variant="secondary">Meeting</Badge>
+                <Badge variant="secondary" className="rounded-full">Meeting</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 Meeting {student.current_pertemuan} of the current chapter
@@ -145,7 +159,7 @@ export function StudentDashboardContent({
             </CardContent>
           </Card>
 
-          <Card className="col-span-full">
+          <Card className="col-span-full rounded-2xl border-0 shadow-lg shadow-foreground/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-card-foreground">Your Teacher</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -153,7 +167,7 @@ export function StudentDashboardContent({
             <CardContent>
               {student.teacher ? (
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10 text-[#1e5fa8]">
                     <span className="text-lg font-semibold">
                       {student.teacher.name.charAt(0).toUpperCase()}
                     </span>
@@ -171,7 +185,7 @@ export function StudentDashboardContent({
             </CardContent>
           </Card>
 
-          <Card className="col-span-full">
+          <Card className="col-span-full rounded-2xl border-0 shadow-lg shadow-foreground/5">
             <CardHeader>
               <CardTitle className="text-card-foreground">Learning Progress Overview</CardTitle>
               <CardDescription>
@@ -180,30 +194,30 @@ export function StudentDashboardContent({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
+                <div className="flex items-center justify-between rounded-xl bg-secondary/70 p-4">
                   <div>
                     <p className="font-medium text-secondary-foreground">HSK Level Progress</p>
                     <p className="text-sm text-muted-foreground">
                       Level {student.current_hsk_level} of 6
                     </p>
                   </div>
-                  <div className="h-2 w-32 rounded-full bg-muted overflow-hidden">
+                  <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full bg-primary rounded-full transition-all"
+                      className="h-full rounded-full bg-[#1e5fa8] transition-all"
                       style={{
                         width: `${(student.current_hsk_level / 6) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
+                <div className="flex items-center justify-between rounded-xl bg-secondary/70 p-4">
                   <div>
                     <p className="font-medium text-secondary-foreground">Current Chapter</p>
                     <p className="text-sm text-muted-foreground">
                       Bab {student.current_bab}, Pertemuan {student.current_pertemuan}
                     </p>
                   </div>
-                  <Badge className="bg-primary text-primary-foreground">In Progress</Badge>
+                  <Badge className="rounded-full bg-[#1e5fa8] text-white">In Progress</Badge>
                 </div>
               </div>
             </CardContent>

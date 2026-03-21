@@ -52,50 +52,66 @@ export default function TeacherSignUpPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
-              <CheckCircle className="h-6 w-6 text-accent" />
-            </div>
-            <CardTitle className="text-2xl font-bold">
-              Request Submitted
-            </CardTitle>
-            <CardDescription>
-              Your teacher account request has been sent to the administrator
-              for approval.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-sm text-muted-foreground mb-6">
-              You will receive an email at <strong>{formData.email}</strong>{" "}
-              once your request has been reviewed. This usually takes 1-2
-              business days.
-            </p>
-            <Link href="/signin">
-              <Button variant="outline" className="w-full bg-transparent">
-                Back to Sign In
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="relative min-h-screen overflow-hidden bg-background px-4 py-12">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-32 -right-28 h-72 w-72 rounded-full bg-[#1e5fa8]/10 blur-3xl" />
+          <div className="absolute top-1/2 -left-20 h-64 w-64 rounded-full bg-[#e53935]/10 blur-3xl" />
+          <div className="absolute bottom-0 right-1/3 h-52 w-52 rounded-full bg-[#f9a825]/10 blur-3xl" />
+        </div>
+
+        <div className="relative mx-auto w-full max-w-md">
+          <Card className="w-full rounded-2xl border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10">
+                <CheckCircle className="h-6 w-6 text-[#1e5fa8]" />
+              </div>
+              <CardTitle className="text-2xl font-bold">
+                Request Submitted
+              </CardTitle>
+              <CardDescription>
+                Your teacher account request has been sent to the administrator
+                for approval.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="mb-6 text-sm text-muted-foreground">
+                You will receive an email at <strong>{formData.email}</strong>{" "}
+                once your request has been reviewed. This usually takes 1-2
+                business days.
+              </p>
+              <Link href="/signin">
+                <Button variant="outline" className="h-11 w-full rounded-xl bg-transparent">
+                  Back to Sign In
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background p-4">
-      <Link
-        href="/"
-        className="absolute top-4 left-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Home
-      </Link>
-      <Card className="w-full max-w-md">
+    <div className="relative min-h-screen overflow-hidden bg-background px-4 py-12">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -right-28 h-72 w-72 rounded-full bg-[#1e5fa8]/10 blur-3xl" />
+        <div className="absolute top-1/2 -left-20 h-64 w-64 rounded-full bg-[#e53935]/10 blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 h-52 w-52 rounded-full bg-[#f9a825]/10 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-md">
+        <Link
+          href="/"
+          className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-foreground/10 hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Home
+        </Link>
+
+        <Card className="w-full rounded-2xl border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Users className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10">
+            <Users className="h-6 w-6 text-[#1e5fa8]" />
           </div>
           <CardTitle className="text-2xl font-bold">
             Teacher Access Request
@@ -107,7 +123,7 @@ export default function TeacherSignUpPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -121,6 +137,7 @@ export default function TeacherSignUpPage() {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -133,6 +150,7 @@ export default function TeacherSignUpPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                className="h-11 rounded-xl"
               />
             </div>
             <div className="space-y-2">
@@ -144,9 +162,14 @@ export default function TeacherSignUpPage() {
                 value={formData.message}
                 onChange={handleChange}
                 rows={4}
+                className="rounded-xl"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]"
+              disabled={loading}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -162,7 +185,7 @@ export default function TeacherSignUpPage() {
               Already have an account?{" "}
               <Link
                 href="/signin"
-                className="font-medium text-primary hover:underline"
+                className="font-medium text-[#1e5fa8] hover:underline"
               >
                 Sign in
               </Link>
@@ -170,7 +193,7 @@ export default function TeacherSignUpPage() {
             <p>
               <Link
                 href="/signup"
-                className="font-medium text-primary hover:underline"
+                className="font-medium text-[#1e5fa8] hover:underline"
               >
                 &larr; Back to role selection
               </Link>
@@ -178,6 +201,7 @@ export default function TeacherSignUpPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
