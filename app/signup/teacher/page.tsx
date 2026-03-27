@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -13,21 +13,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
+import { Users, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 
 export default function TeacherSignUpPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    message: "",
+    password: "",
+    confirmPassword: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -37,14 +36,69 @@ export default function TeacherSignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // TODO: integrate with backend — check for existing requests and submit to teacher_requests table
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signUpError || !data.user) {
+        setError(signUpError?.message ?? "Unable to create account");
+        return;
+      }
+
+      if (!data.session) {
+        setError(
+          "Signup succeeded but no session was created. In Supabase, disable Email Confirm for this flow, then try again."
+        );
+        return;
+      }
+
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: data.user.id,
+        email: formData.email,
+        full_name: formData.name,
+        role: "teacher",
+      });
+
+      if (profileError) {
+        setError(profileError.message);
+        return;
+      }
+
+      const { error: requestError } = await supabase.from("teacher_requests").insert({
+        name: formData.name,
+        email: formData.email,
+        message: null,
+      });
+
+      if (requestError) {
+        if (requestError.code === "23505") {
+          setError("A teacher request already exists for this email. Please contact admin.");
+        } else {
+          setError(requestError.message);
+        }
+        return;
+      }
+
       setSubmitted(true);
-    } catch {
-      setError("An unexpected error occurred");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -60,24 +114,19 @@ export default function TeacherSignUpPage() {
         </div>
 
         <div className="relative mx-auto w-full max-w-md">
-          <Card className="w-full rounded-2xl border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
+          <Card className="w-full rounded-2xl border border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10">
                 <CheckCircle className="h-6 w-6 text-[#1e5fa8]" />
               </div>
-              <CardTitle className="text-2xl font-bold">
-                Request Submitted
-              </CardTitle>
+              <CardTitle className="text-2xl font-bold">Request Submitted</CardTitle>
               <CardDescription>
-                Your teacher account request has been sent to the administrator
-                for approval.
+                Your teacher request has been sent to admin for approval.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
               <p className="mb-6 text-sm text-muted-foreground">
-                You will receive an email at <strong>{formData.email}</strong>{" "}
-                once your request has been reviewed. This usually takes 1-2
-                business days.
+                Your account is created. You can sign in with your own password after approval.
               </p>
               <Link href="/signin">
                 <Button variant="outline" className="h-11 w-full rounded-xl bg-transparent">
@@ -108,7 +157,7 @@ export default function TeacherSignUpPage() {
           Home
         </Link>
 
-        <Card className="w-full rounded-2xl border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
+        <Card className="w-full rounded-2xl border border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10">
             <Users className="h-6 w-6 text-[#1e5fa8]" />
@@ -117,7 +166,7 @@ export default function TeacherSignUpPage() {
             Teacher Access Request
           </CardTitle>
           <CardDescription>
-            Submit your request to become a teacher on our platform
+            Create your account and wait for admin approval
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -154,15 +203,29 @@ export default function TeacherSignUpPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="message">Why do you want to teach?</Label>
-              <Textarea
-                id="message"
-                name="message"
-                placeholder="Tell us about your teaching experience and why you want to join our platform..."
-                value={formData.message}
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Create a password"
+                value={formData.password}
                 onChange={handleChange}
-                rows={4}
-                className="rounded-xl"
+                required
+                className="h-11 rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                className="h-11 rounded-xl"
               />
             </div>
             <Button
@@ -173,10 +236,10 @@ export default function TeacherSignUpPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
+                  Creating account...
                 </>
               ) : (
-                "Submit Request"
+                "Sign Up"
               )}
             </Button>
           </form>

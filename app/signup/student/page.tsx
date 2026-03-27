@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,11 +52,66 @@ export default function StudentSignUpPage() {
     setLoading(true);
 
     try {
-      // TODO: integrate with backend
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      router.push("/auth/sign-up-success");
-    } catch {
-      setError("An unexpected error occurred");
+      const supabase = createClient();
+      const normalizedTeacherCode = formData.teacherCode.trim().toUpperCase();
+
+      const { data: teacherRows, error: teacherError } = await supabase.rpc(
+        "find_teacher_by_code",
+        {
+          input_code: normalizedTeacherCode,
+        }
+      );
+
+      const teacher = Array.isArray(teacherRows) ? teacherRows[0] : null;
+
+      if (teacherError || !teacher) {
+        setError("Teacher code is invalid.");
+        return;
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signUpError || !data.user) {
+        setError(signUpError?.message ?? "Unable to create account");
+        return;
+      }
+
+      if (!data.session) {
+        setError(
+          "Signup succeeded but no session was created. In Supabase, disable Email Confirm for this flow, then try again."
+        );
+        return;
+      }
+
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: data.user.id,
+        email: formData.email,
+        full_name: formData.name,
+        role: "student",
+      });
+
+      if (profileError) {
+        setError(profileError.message);
+        return;
+      }
+
+      const { error: studentError } = await supabase.from("students").insert({
+        user_id: data.user.id,
+        teacher_id: teacher.user_id,
+      });
+
+      if (studentError) {
+        setError(studentError.message);
+        return;
+      }
+
+      router.push("/auth/sign-up-success?role=student");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -78,7 +134,7 @@ export default function StudentSignUpPage() {
           Home
         </Link>
 
-        <Card className="w-full rounded-2xl border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
+        <Card className="w-full rounded-2xl border border-white/20 bg-background/85 shadow-xl shadow-foreground/10 backdrop-blur-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10">
             <GraduationCap className="h-6 w-6 text-[#1e5fa8]" />

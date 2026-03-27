@@ -1,22 +1,16 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  BookOpen,
-  GraduationCap,
-  Users,
-  LogOut,
-  TrendingUp,
-} from "lucide-react";
+import { BookOpen, Users, LogOut, Lock, Unlock, ChevronRight } from "lucide-react";
 
 interface Student {
   id: string;
@@ -35,23 +29,146 @@ interface StudentDashboardContentProps {
   student: Student;
 }
 
-const hskLevelDescriptions: Record<number, string> = {
-  1: "Beginner - 150 words",
-  2: "Elementary - 300 words",
-  3: "Intermediate - 600 words",
-  4: "Upper Intermediate - 1200 words",
-  5: "Advanced - 2500 words",
-  6: "Proficient - 5000+ words",
-};
+interface Chapter {
+  id: string;
+  title: string;
+  hsk_level: number;
+  chapter_number: number;
+}
+
+interface ChapterProgress {
+  score?: number;
+  completed: boolean;
+}
 
 export function StudentDashboardContent({
   student,
 }: StudentDashboardContentProps) {
   const router = useRouter();
+  const [access, setAccess] = useState<Map<string, boolean>>(new Map());
+  const [progress, setProgress] = useState<Map<string, ChapterProgress>>(new Map());
+
+  const chapters = useMemo<Chapter[]>(() => {
+    const generated: Chapter[] = [];
+    for (let level = 1; level <= 6; level += 1) {
+      for (let chapter = 1; chapter <= 10; chapter += 1) {
+        generated.push({
+          id: `hsk${level}-ch${chapter}`,
+          title: `Chapter ${chapter}`,
+          hsk_level: level,
+          chapter_number: chapter,
+        });
+      }
+    }
+    return generated;
+  }, []);
+
+  useEffect(() => {
+    const loadAccessAndProgress = async () => {
+      const supabase = createClient();
+
+      // Optional tables for teacher-controlled unlocks and student progress.
+      // If tables are not created yet, dashboard still works with all cards locked.
+      const { data: accessData, error: accessError } = await supabase
+        .from("student_chapter_access")
+        .select("chapter_id, is_unlocked")
+        .eq("student_id", student.id);
+
+      if (!accessError && accessData) {
+        const nextAccess = new Map<string, boolean>();
+        accessData.forEach((row) => {
+          nextAccess.set(row.chapter_id, row.is_unlocked === true);
+        });
+        setAccess(nextAccess);
+      }
+
+      const { data: progressData, error: progressError } = await supabase
+        .from("student_chapter_progress")
+        .select("chapter_id, score, is_completed")
+        .eq("student_id", student.id);
+
+      if (!progressError && progressData) {
+        const nextProgress = new Map<string, ChapterProgress>();
+        progressData.forEach((row) => {
+          nextProgress.set(row.chapter_id, {
+            score: typeof row.score === "number" ? row.score : undefined,
+            completed: row.is_completed === true,
+          });
+        });
+        setProgress(nextProgress);
+      }
+    };
+
+    loadAccessAndProgress();
+  }, [student.id]);
 
   const handleLogout = async () => {
-    // TODO: call auth signOut API when DB/auth backend is wired.
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.push("/signin");
+    router.refresh();
+  };
+
+  const renderChapterCard = (chapter: Chapter) => {
+    const isUnlocked = access.get(chapter.id) === true;
+    const chapterProgress = progress.get(chapter.id);
+
+    if (isUnlocked) {
+      return (
+        <Link href={`/assignment/${chapter.id}`} key={chapter.id} className="block w-60 flex-shrink-0">
+          <Card className="h-full rounded-2xl border border-[#1e5fa8]/30 bg-gradient-to-br from-[#1e5fa8]/5 to-[#f9a825]/5 transition-all hover:-translate-y-0.5 hover:shadow-lg">
+            <CardContent className="p-4">
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">{`HSK ${chapter.hsk_level}`}</p>
+                  <h3 className="text-base font-semibold text-card-foreground">{chapter.title}</h3>
+                </div>
+                <Badge className="rounded-full bg-emerald-500 text-white">
+                  <Unlock className="mr-1 h-3 w-3" />
+                  Open
+                </Badge>
+              </div>
+
+              {chapterProgress?.completed ? (
+                <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">
+                  <p className="font-medium">Completed</p>
+                  {typeof chapterProgress.score === "number" ? (
+                    <p className="mt-1 text-xs">Score: {chapterProgress.score}%</p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between rounded-xl bg-[#1e5fa8]/10 p-3 text-sm text-[#1e5fa8]">
+                  <span>Start assignment</span>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
+      );
+    }
+
+    return (
+      <div key={chapter.id} className="w-60 flex-shrink-0">
+        <Card className="h-full rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 to-slate-200 opacity-80">
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm text-slate-500">{`HSK ${chapter.hsk_level}`}</p>
+                <h3 className="text-base font-semibold text-slate-700">{chapter.title}</h3>
+              </div>
+              <Badge variant="secondary" className="rounded-full">
+                <Lock className="mr-1 h-3 w-3" />
+                Locked
+              </Badge>
+            </div>
+            <div className="rounded-xl bg-slate-200 p-3 text-sm text-slate-600">
+              Waiting for teacher to unlock
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
 
   return (
@@ -94,134 +211,65 @@ export function StudentDashboardContent({
             Welcome back, {student.name}!
           </h2>
           <p className="text-muted-foreground">
-            Track your HSK learning progress below
+            Open unlocked chapters and complete assignments
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="col-span-full rounded-2xl border-0 shadow-lg shadow-foreground/5 lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">
-                Current HSK Level
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e5fa8] text-white">
-                  <span className="text-2xl font-bold">
-                    {student.current_hsk_level}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-card-foreground">HSK Level {student.current_hsk_level}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {hskLevelDescriptions[student.current_hsk_level] ?? "Level info coming soon"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 shadow-lg shadow-foreground/5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Current Bab</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-card-foreground">
-                  {student.current_bab}
-                </span>
-                <Badge variant="secondary" className="rounded-full">Chapter</Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                You are currently studying Chapter {student.current_bab}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 shadow-lg shadow-foreground/5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Current Pertemuan</CardTitle>
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-card-foreground">
-                  {student.current_pertemuan}
-                </span>
-                <Badge variant="secondary" className="rounded-full">Meeting</Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Meeting {student.current_pertemuan} of the current chapter
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-full rounded-2xl border-0 shadow-lg shadow-foreground/5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Your Teacher</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
+        <Card className="mb-8 rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
+          <CardContent className="p-5">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <Badge className="rounded-full bg-[#1e5fa8] text-white">HSK {student.current_hsk_level}</Badge>
+              <span>{`Current Bab ${student.current_bab}, Pertemuan ${student.current_pertemuan}`}</span>
               {student.teacher ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1e5fa8]/10 text-[#1e5fa8]">
-                    <span className="text-lg font-semibold">
-                      {student.teacher.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-card-foreground">{student.teacher.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {student.teacher.email}
-                    </p>
-                  </div>
-                </div>
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  {`Teacher: ${student.teacher.name}`}
+                </span>
               ) : (
-                <p className="text-muted-foreground">No teacher assigned</p>
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  Teacher not assigned
+                </span>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card className="col-span-full rounded-2xl border-0 shadow-lg shadow-foreground/5">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Learning Progress Overview</CardTitle>
-              <CardDescription>
-                Your progress is tracked and updated by your teacher
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl bg-secondary/70 p-4">
+        <div className="space-y-8">
+          {Array.from({ length: 6 }, (_, index) => index + 1).map((level) => {
+            const levelChapters = chapters.filter((chapter) => chapter.hsk_level === level);
+            const unlockedCount = levelChapters.filter(
+              (chapter) => access.get(chapter.id) === true
+            ).length;
+
+            return (
+              <section key={level}>
+                <div className="mb-3 flex items-end justify-between gap-4">
                   <div>
-                    <p className="font-medium text-secondary-foreground">HSK Level Progress</p>
+                    <h3 className="text-2xl font-bold text-foreground">{`HSK Level ${level}`}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Level {student.current_hsk_level} of 6
+                      {`${unlockedCount}/${levelChapters.length} chapters unlocked`}
                     </p>
                   </div>
-                  <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
+                  <div className="h-2 w-36 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full rounded-full bg-[#1e5fa8] transition-all"
+                      className="h-full bg-[#1e5fa8] transition-all"
                       style={{
-                        width: `${(student.current_hsk_level / 6) * 100}%`,
+                        width:
+                          levelChapters.length === 0
+                            ? "0%"
+                            : `${(unlockedCount / levelChapters.length) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-xl bg-secondary/70 p-4">
-                  <div>
-                    <p className="font-medium text-secondary-foreground">Current Chapter</p>
-                    <p className="text-sm text-muted-foreground">
-                      Bab {student.current_bab}, Pertemuan {student.current_pertemuan}
-                    </p>
-                  </div>
-                  <Badge className="rounded-full bg-[#1e5fa8] text-white">In Progress</Badge>
+
+                <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
+                  {levelChapters.map((chapter) => renderChapterCard(chapter))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </section>
+            );
+          })}
         </div>
       </main>
     </div>

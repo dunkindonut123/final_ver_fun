@@ -9,7 +9,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function SignUpSuccessPage() {
+export default async function SignUpSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string }>;
+}) {
+  const params = await searchParams;
+  const role = params.role === "teacher" ? "teacher" : "student";
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background px-4 py-12">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -26,12 +33,16 @@ export default function SignUpSuccessPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Account Created!</CardTitle>
           <CardDescription>
-            Your student account has been successfully created.
+            {role === "teacher"
+              ? "Your teacher account has been successfully created."
+              : "Your student account has been successfully created."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            You can now sign in and start learning HSK with your teacher.
+            {role === "teacher"
+              ? "You can now sign in and start managing your classes."
+              : "You can now sign in and start learning HSK with your teacher."}
           </p>
           <Button asChild className="h-11 w-full rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">
             <Link href="/signin">Sign In</Link>

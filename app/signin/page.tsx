@@ -4,6 +4,7 @@ import { useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,14 +30,96 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // TODO: wire this to Supabase auth signInWithPassword.
-      // TODO: query teacher/student tables and route to respective dashboard.
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const supabase = createClient();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      // Placeholder behavior until auth backend is connected.
-      router.push("/student/dashboard");
-    } catch {
-      setError("An unexpected error occurred");
+      if (signInError || !data.user) {
+        setError(signInError?.message ?? "Invalid email or password");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      let resolvedRole: "teacher" | "student" | null = null;
+
+      if (!profileError && profile) {
+        resolvedRole = profile.role;
+      } else {
+        const { data: teacherRow } = await supabase
+          .from("teachers")
+          .select("user_id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+        if (teacherRow) {
+          resolvedRole = "teacher";
+        } else {
+          const { data: studentRow } = await supabase
+            .from("students")
+            .select("user_id")
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+
+          if (studentRow) {
+            resolvedRole = "student";
+          }
+        }
+
+        if (resolvedRole) {
+          const fallbackName =
+            (typeof data.user.user_metadata?.full_name === "string" && data.user.user_metadata.full_name) ||
+            null;
+
+          const { error: insertProfileError } = await supabase.from("profiles").insert({
+            id: data.user.id,
+            email: data.user.email ?? email,
+            full_name: fallbackName,
+            role: resolvedRole,
+          });
+
+          if (insertProfileError) {
+            setError(insertProfileError.message);
+            return;
+          }
+        }
+      }
+
+      if (!resolvedRole) {
+        setError(
+          "Profile not found. Make sure your profiles.id matches auth.users.id and role is set to teacher or student."
+        );
+        return;
+      }
+
+      if (resolvedRole === "teacher") {
+        const { data: approvedTeacher, error: approvedTeacherError } = await supabase
+          .from("teachers")
+          .select("user_id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+        if (approvedTeacherError || !approvedTeacher) {
+          await supabase.auth.signOut();
+          setError("Your teacher account is still pending admin approval.");
+          return;
+        }
+
+        router.push("/teacher/dashboard");
+      } else {
+        router.push("/student/dashboard");
+      }
+
+      router.refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -129,7 +212,7 @@ export default function LoginPage() {
                   href="/signup/teacher"
                   className="font-medium text-[#1e5fa8] hover:underline"
                 >
-                  Request access
+                  Sign up here
                 </Link>
               </p>
             </div>
