@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { ChapterTabs } from "@/components/student/chapter-tabs";
+import { AssignmentFlow } from "@/components/student/assignment-flow";
 
 export default async function AssignmentPage({
   params,
@@ -24,12 +26,16 @@ export default async function AssignmentPage({
           Back to Dashboard
         </Link>
 
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Chapter {chapterId}</h1>
+          <p className="mt-1 text-muted-foreground">HSK Level Chapter</p>
+        </div>
+
         <div className="rounded-2xl border bg-card p-8 shadow-sm">
-          <p className="mb-2 text-sm text-muted-foreground">Assignment Placeholder</p>
-          <h1 className="text-2xl font-bold text-card-foreground">{chapterId}</h1>
-          <p className="mt-4 text-muted-foreground">
-            This assignment page is intentionally left blank for now.
-          </p>
+          <ChapterTabs
+            chapterId={chapterId}
+            exerciseContent={<AssignmentFlow chapterId={chapterId} />}
+          />
         </div>
       </div>
     </div>

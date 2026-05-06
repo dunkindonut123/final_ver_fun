@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Users, LogOut, Lock, Unlock, ChevronRight } from "lucide-react";
+import { summaryFromChapterProgress } from "@/lib/assignment-progress";
 
 interface Student {
   id: string;
@@ -50,18 +51,17 @@ export function StudentDashboardContent({
 
   const chapters = useMemo<Chapter[]>(() => {
     const generated: Chapter[] = [];
-    for (let level = 1; level <= 6; level += 1) {
-      for (let chapter = 1; chapter <= 10; chapter += 1) {
-        generated.push({
-          id: `hsk${level}-ch${chapter}`,
-          title: `Chapter ${chapter}`,
-          hsk_level: level,
-          chapter_number: chapter,
-        });
-      }
+    // Only generate chapters for the student's current HSK level
+    for (let chapter = 1; chapter <= 10; chapter += 1) {
+      generated.push({
+        id: `hsk${student.current_hsk_level}-ch${chapter}`,
+        title: `Chapter ${chapter}`,
+        hsk_level: student.current_hsk_level,
+        chapter_number: chapter,
+      });
     }
     return generated;
-  }, []);
+  }, [student.current_hsk_level]);
 
   useEffect(() => {
     const loadAccessAndProgress = async () => {
@@ -97,6 +97,7 @@ export function StudentDashboardContent({
         });
         setProgress(nextProgress);
       }
+
     };
 
     loadAccessAndProgress();
@@ -112,6 +113,8 @@ export function StudentDashboardContent({
   const renderChapterCard = (chapter: Chapter) => {
     const isUnlocked = access.get(chapter.id) === true;
     const chapterProgress = progress.get(chapter.id);
+    const assignmentSummary = summaryFromChapterProgress(chapterProgress?.score ?? null);
+    const isCompleted = chapterProgress?.completed === true || assignmentSummary.isComplete;
 
     if (isUnlocked) {
       return (
@@ -129,10 +132,10 @@ export function StudentDashboardContent({
                 </Badge>
               </div>
 
-              {chapterProgress?.completed ? (
+              {isCompleted ? (
                 <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">
                   <p className="font-medium">Completed</p>
-                  {typeof chapterProgress.score === "number" ? (
+                  {chapterProgress && typeof chapterProgress.score === "number" ? (
                     <p className="mt-1 text-xs">Score: {chapterProgress.score}%</p>
                   ) : null}
                 </div>
@@ -236,7 +239,7 @@ export function StudentDashboardContent({
         </Card>
 
         <div className="space-y-8">
-          {Array.from({ length: 6 }, (_, index) => index + 1).map((level) => {
+          {[student.current_hsk_level].map((level) => {
             const levelChapters = chapters.filter((chapter) => chapter.hsk_level === level);
             const unlockedCount = levelChapters.filter(
               (chapter) => access.get(chapter.id) === true

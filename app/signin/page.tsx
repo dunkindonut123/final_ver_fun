@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type React from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,24 +50,23 @@ export default function LoginPage() {
       if (!profileError && profile) {
         resolvedRole = profile.role;
       } else {
-        const { data: teacherRow } = await supabase
-          .from("teachers")
-          .select("user_id")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-
-        if (teacherRow) {
-          resolvedRole = "teacher";
-        } else {
-          const { data: studentRow } = await supabase
+        const [{ data: teacherRow }, { data: studentRow }] = await Promise.all([
+          supabase
+            .from("teachers")
+            .select("user_id")
+            .eq("user_id", data.user.id)
+            .maybeSingle(),
+          supabase
             .from("students")
             .select("user_id")
             .eq("user_id", data.user.id)
-            .maybeSingle();
+            .maybeSingle(),
+        ]);
 
-          if (studentRow) {
-            resolvedRole = "student";
-          }
+        if (teacherRow) {
+          resolvedRole = "teacher";
+        } else if (studentRow) {
+          resolvedRole = "student";
         }
 
         if (resolvedRole) {
@@ -110,13 +107,14 @@ export default function LoginPage() {
           setError("Your teacher account is still pending admin approval.");
           return;
         }
-
-        router.push("/teacher/dashboard");
       } else {
-        router.push("/student/dashboard");
+        if (resolvedRole !== "student") {
+          setError("Profile not found. Please contact support or sign up again.");
+          return;
+        }
       }
 
-      router.refresh();
+      window.location.replace(resolvedRole === "teacher" ? "/teacher/dashboard" : "/student/dashboard");
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(message);

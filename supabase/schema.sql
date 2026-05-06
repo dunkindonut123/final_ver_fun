@@ -76,6 +76,16 @@ create table if not exists public.student_chapter_progress (
   primary key (student_id, chapter_id)
 );
 
+create table if not exists public.student_assignment_progress (
+  student_id uuid not null references public.students(user_id) on delete cascade,
+  chapter_id text not null references public.hsk_chapters(id) on delete cascade,
+  assignment_key text not null check (assignment_key in ('A1', 'A2', 'A3', 'B')),
+  is_completed boolean not null default false,
+  completed_at timestamptz,
+  updated_at timestamptz not null default now(),
+  primary key (student_id, chapter_id, assignment_key)
+);
+
 insert into public.hsk_chapters (id, title, hsk_level, chapter_number)
 select
   format('hsk%s-ch%s', level_num, chapter_num),
@@ -117,6 +127,12 @@ before update on public.student_chapter_progress
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists student_assignment_progress_set_updated_at on public.student_assignment_progress;
+create trigger student_assignment_progress_set_updated_at
+before update on public.student_assignment_progress
+for each row
+execute function public.set_updated_at();
+
 create or replace function public.find_teacher_by_code(input_code text)
 returns table(user_id uuid)
 language sql
@@ -139,6 +155,7 @@ alter table public.teacher_requests enable row level security;
 alter table public.hsk_chapters enable row level security;
 alter table public.student_chapter_access enable row level security;
 alter table public.student_chapter_progress enable row level security;
+alter table public.student_assignment_progress enable row level security;
 
 drop policy if exists "hsk_chapters_select_all" on public.hsk_chapters;
 create policy "hsk_chapters_select_all"
@@ -271,3 +288,29 @@ using (
     where s.user_id = student_id and s.teacher_id = auth.uid()
   )
 );
+
+drop policy if exists "student_assignment_progress_select_student_or_teacher" on public.student_assignment_progress;
+create policy "student_assignment_progress_select_student_or_teacher"
+on public.student_assignment_progress for select
+to authenticated
+using (
+  auth.uid() = student_id
+  or exists (
+    select 1
+    from public.students s
+    where s.user_id = student_id and s.teacher_id = auth.uid()
+  )
+);
+
+drop policy if exists "student_assignment_progress_insert_student" on public.student_assignment_progress;
+create policy "student_assignment_progress_insert_student"
+on public.student_assignment_progress for insert
+to authenticated
+with check (auth.uid() = student_id);
+
+drop policy if exists "student_assignment_progress_update_student" on public.student_assignment_progress;
+create policy "student_assignment_progress_update_student"
+on public.student_assignment_progress for update
+to authenticated
+using (auth.uid() = student_id)
+with check (auth.uid() = student_id);

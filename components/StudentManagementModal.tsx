@@ -9,7 +9,9 @@ import {
   lockHSKLevelForStudent,
 } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
+import { summaryFromChapterProgress } from "@/lib/assignment-progress";
 
 interface Chapter {
   id: string;
@@ -63,6 +65,7 @@ export default function StudentManagementModal({
   const [loading, setLoading] = useState(true);
   const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [studentHSKLevel, setStudentHSKLevel] = useState<number | null>(null);
 
   const fallbackChapters = useMemo(() => generateFallbackChapters(), []);
 
@@ -70,6 +73,21 @@ export default function StudentManagementModal({
     const loadData = async () => {
       try {
         const supabase = createClient();
+
+        // Fetch student's current HSK level
+        const { data: studentData } = await supabase
+          .from("students")
+          .select("current_hsk_level")
+          .eq("user_id", studentId)
+          .single();
+
+        if (studentData) {
+          setStudentHSKLevel(studentData.current_hsk_level || 1);
+          setExpandedLevel(studentData.current_hsk_level || 1); // Auto-expand the student's current level
+        } else {
+          setStudentHSKLevel(1); // Default to level 1 if not found
+          setExpandedLevel(1);
+        }
 
         const { data: chaptersData, error: chaptersError } = await supabase
           .from("hsk_chapters")
@@ -193,7 +211,7 @@ export default function StudentManagementModal({
         </div>
 
         <div className="space-y-4 p-6">
-          {Array.from({ length: 6 }, (_, i) => i + 1).map((level) => {
+          {studentHSKLevel !== null && [studentHSKLevel].map((level) => {
             const levelChapters = chapters.filter((ch) => ch.hsk_level === level);
             const allUnlocked = levelChapters.length > 0 && levelChapters.every((ch) => unlocked[ch.id]);
             const isExpanded = expandedLevel === level;
@@ -230,6 +248,7 @@ export default function StudentManagementModal({
                   <div className="space-y-2 border-t bg-white p-4">
                     {levelChapters.map((chapter) => {
                       const chapterProgress = progress[chapter.id];
+                      const assignmentSummary = summaryFromChapterProgress(chapterProgress?.score ?? null);
 
                       return (
                         <div
@@ -238,6 +257,17 @@ export default function StudentManagementModal({
                         >
                           <div className="flex-1">
                             <p className="font-medium text-slate-900">{chapter.title}</p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                              <Badge variant="secondary" className="rounded-full">
+                                Assignments {assignmentSummary.completedCount}/{assignmentSummary.totalCount}
+                              </Badge>
+                              <Badge
+                                className={assignmentSummary.isComplete ? "rounded-full bg-emerald-500 text-white" : "rounded-full"}
+                                variant={assignmentSummary.isComplete ? undefined : "secondary"}
+                              >
+                                {assignmentSummary.isComplete ? "Completed" : "In progress"}
+                              </Badge>
+                            </div>
                             {chapterProgress ? (
                               <div className="mt-1 space-y-1 text-xs text-slate-600">
                                 <p>
