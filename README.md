@@ -1,53 +1,158 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fun Mandarin - Language Learning Platform
 
-## Supabase Setup
+A modern, interactive Mandarin Chinese language learning platform built with [Next.js](https://nextjs.org), featuring role-based authentication, gamified learning experiences, and comprehensive course management.
 
-1. Create a Supabase project.
-2. In Supabase, open SQL Editor and run [supabase/schema.sql](supabase/schema.sql).
-3. In Authentication -> Providers -> Email, enable email/password auth.
-4. For the current client-side signup flow, turn off Confirm Email (Authentication -> Providers -> Email -> Confirm email).
-5. Copy [.env.example](.env.example) to `.env.local` and fill in values:
+## 🎯 Features
+
+- **Role-Based Access**: Separate experiences for students and teachers
+- **Interactive Lessons**: Assignments and exercises with progress tracking
+- **Gamification**: Typing games and challenges to reinforce learning
+- **Teacher Management**: Teacher approval system and student code validation
+- **Admin Dashboard**: Teacher approval and platform management
+- **Responsive Design**: Mobile-friendly UI built with Tailwind CSS and Radix UI
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 16, React 19, TypeScript
+- **Styling**: Tailwind CSS, Radix UI components
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **Authentication**: Supabase Email/Password Auth
+- **Database**: Supabase PostgreSQL
+- **UI Components**: Lucide React icons, custom Radix UI components
+
+## 📋 Prerequisites
+
+- Node.js 18+ and npm/yarn/pnpm/bun
+- A [Supabase](https://supabase.com) account and project
+- Git
+
+## 🚀 Getting Started
+
+### 1. Clone and Install
+
+```bash
+git clone <repository-url>
+cd template-web
+npm install
+```
+
+### 2. Set Up Supabase
+
+1. Create a new project on [Supabase](https://supabase.com)
+2. In the Supabase dashboard, navigate to **SQL Editor**
+3. Create a new query and paste the contents of [supabase/schema.sql](supabase/schema.sql)
+4. Execute the query to create all required tables and functions
+5. In **Authentication → Providers → Email**:
+   - Enable email/password auth
+   - **Disable** "Confirm email" (required for current signup flow)
+
+### 3. Configure Environment Variables
+
+Copy the example environment file and fill in your Supabase credentials:
 
 ```bash
 cp .env.example .env.local
 ```
 
-6. Restart the dev server after updating env vars.
+Edit `.env.local` with:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Auth Flow Implemented
+You can find these values in **Supabase → Settings → API**
 
-- Student sign up: creates user in Auth, creates a `profiles` row with role `student`, validates `teacher_code`, then creates a `students` row.
-- Teacher sign up: creates user in Auth, creates a `profiles` row with role `teacher`, then creates a `teachers` row with generated teacher code.
-- Sign in: checks `profiles.role` and redirects to the matching dashboard.
-- Dashboard guards: server-side role check prevents accessing the wrong dashboard URL.
-
-## Troubleshooting
-
-- If sign in shows profile not found:
-	- Ensure the user exists in `auth.users`.
-	- Ensure `profiles.id` is exactly the same UUID as `auth.users.id`.
-	- Ensure `profiles.role` is either `student` or `teacher`.
-- If teacher/student sign up says no session was created:
-	- In Supabase, disable Confirm Email for this current client-side flow.
-	- Then sign up again.
-
-## Getting Started
-
-First, run the development server:
+### 4. Start Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
+
+- `app/` - Next.js App Router pages and layouts
+  - `auth/` - Sign up and authentication pages
+  - `student/` - Student dashboard and features
+  - `teacher/` - Teacher dashboard and management
+  - `admin/` - Admin approval system
+  - `assignment/` - Lesson and exercise pages
+  - `game/` - Gamified learning experiences
+  - `api/` - API routes for backend operations
+- `components/` - Reusable React components
+  - `ui/` - Base UI components (Button, Card, Dialog, etc.)
+  - `student/`, `teacher/`, `admin/` - Feature-specific components
+- `lib/` - Utility functions and Supabase clients
+  - `supabase/` - Supabase configuration and middleware
+  - `courses-data.ts` - Course content definitions
+  - `hanzi-data.ts` - Chinese character data
+  - `actions.ts` - Server actions
+- `supabase/` - Database schema
+
+## 🔐 Authentication Flow
+
+### Student Sign Up
+1. User creates account with email/password
+2. System creates `profiles` row with role `student`
+3. User must provide valid teacher code
+4. System creates `students` row linked to teacher
+5. Redirects to student dashboard
+
+### Teacher Sign Up
+1. User creates account with email/password
+2. System creates `profiles` row with role `teacher`
+3. System generates unique teacher code
+4. System creates `teachers` row
+5. Redirects to teacher dashboard
+
+### Sign In
+- System checks `profiles.role` and redirects to appropriate dashboard
+- Server-side guards prevent accessing wrong dashboard URLs
+
+## 📦 Available Scripts
+
+- `npm run dev` - Start development server (with hot reload)
+- `npm run build` - Build for production
+- `npm start` - Start production server
+
+## 🔧 Development
+
+The app uses hot module replacement, so changes to files automatically refresh the browser. Edit files in the `app/` directory to see changes immediately.
+
+Key development files:
+- `middleware.ts` - Request middleware and Supabase session handling
+- `next.config.ts` - Next.js configuration
+- `tsconfig.json` - TypeScript configuration
+
+## 🚨 Troubleshooting
+
+### Sign in shows "Profile not found"
+- Verify user exists in `auth.users` (Supabase → Authentication → Users)
+- Ensure `profiles.id` matches the user's UUID exactly
+- Verify `profiles.role` is either `student` or `teacher`
+
+### Sign up returns "No session was created"
+1. Go to Supabase Dashboard
+2. Navigate to **Authentication → Providers → Email**
+3. Disable the "Confirm email" option
+4. Try signing up again
+
+### Environment variables not loading
+- Ensure `.env.local` file exists in the root directory
+- Verify variable names match exactly (case-sensitive)
+- Restart the development server after updating `.env.local`
+
+## 📚 Learn More
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [Tailwind CSS](https://tailwindcss.com)
+- [Radix UI](https://www.radix-ui.com)
+
+## 📄 License
+
+This project is private and proprietary.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
