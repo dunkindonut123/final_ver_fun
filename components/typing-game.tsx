@@ -238,7 +238,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
 
           <div className="flex items-center justify-center gap-4 pt-4">
             <Link
-              href="/games"
+              href="/"
               className="flex items-center gap-2 px-6 py-3 border border-border rounded-lg text-foreground hover:border-primary hover:text-primary transition-colors"
             >
               <Home className="w-5 h-5" />
@@ -263,7 +263,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
         {/* Header */}
         <div className="flex items-center justify-center gap-4">
           <Link 
-            href="/games"
+            href="/"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <Home className="w-4 h-4" />

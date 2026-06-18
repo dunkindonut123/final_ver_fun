@@ -1,7 +1,5 @@
-import { requireAdminPage } from "@/lib/admin/require-admin";
-import { AdminStudentsContent } from "@/components/admin/admin-students-content";
+import { redirect } from "next/navigation";
 
-export default async function AdminStudentsPage() {
-  await requireAdminPage();
-  return <AdminStudentsContent />;
+export default function AdminStudentsPage() {
+  redirect("/admin/classrooms");
 }

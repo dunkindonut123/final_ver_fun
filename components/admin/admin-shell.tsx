@@ -5,7 +5,6 @@ import { MarketingShell } from "@/components/layout/marketing-shell";
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/teachers", label: "Teachers" },
-  { href: "/admin/students", label: "Students" },
   { href: "/admin/classrooms", label: "Classrooms" },
   { href: "/admin/promotions", label: "Promotions" },
 ];

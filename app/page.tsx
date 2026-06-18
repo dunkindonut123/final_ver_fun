@@ -18,7 +18,6 @@ import {
   MapPin,
   Phone,
   Mail,
-  Gamepad2,
 } from "lucide-react"
 
 // Fun Mandarin Logo Component
@@ -214,7 +213,6 @@ export default function Home() {
                 {[
                   { label: "Kursus", href: "#courses" },
                   { label: "Tentang", href: "#about" },
-                  { label: "Berkompetisi", href: "#games" },
                   { label: "Komunitas", href: "#testimonials" },
                 ].map((item) => (
                   <a
@@ -463,31 +461,6 @@ export default function Home() {
               </Link>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Games CTA Section */}
-      <section id="games" className="py-20 lg:py-28 bg-secondary/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-[#1e5fa8]/10 px-4 py-2 rounded-full mb-6">
-            <Gamepad2 className="h-4 w-4 text-[#1e5fa8]" />
-            <span className="text-sm font-medium text-[#1e5fa8]">Hanzi Type</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            <span className="bg-gradient-to-r from-[#1e5fa8] via-[#e53935] to-[#f9a825] bg-clip-text text-transparent">
-              Kompetisi
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Berkompetisi dalam Permainan Mengetik Mandarin yang cepat. Uji kemampuan mengetik dan pengenalan karakter Anda
-          </p>
-          <a href="/games">
-            <Button className="bg-[#1e5fa8] hover:bg-[#1a5292] text-white gap-2 rounded-xl text-base font-semibold px-8 h-12 shadow-lg shadow-[#1e5fa8]/25">
-              <Gamepad2 className="h-4 w-4" />
-              Berkompetisi
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </a>
         </div>
       </section>
 

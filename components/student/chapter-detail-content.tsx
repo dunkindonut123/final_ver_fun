@@ -7,7 +7,8 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle2, Lock, Play } from "lucide-react";
+import { ChapterTabs } from "@/components/student/chapter-tabs";
+import { ArrowLeft, CheckCircle2, ExternalLink, Lock, Play } from "lucide-react";
 
 type AssignmentStatus = "locked" | "not_started" | "in_progress" | "completed";
 
@@ -109,53 +110,73 @@ export function ChapterDetailContent({
         </p>
       </div>
 
-      {loading ? (
-        <p className="text-muted-foreground">Loading assignments...</p>
-      ) : (
-        <div className="grid gap-4">
-          {assignments.map((assignment) => (
-            <Card
-              key={assignment.studentAssignmentId}
-              className={`rounded-2xl border ${
-                assignment.isLocked
-                  ? "border-border bg-muted/40 opacity-80"
-                  : "border-white/20 bg-background/75 shadow-lg shadow-foreground/5"
-              }`}
-            >
-              <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
-                <div>
-                  <p className="text-sm text-muted-foreground">Assignment {assignment.orderIndex}</p>
-                  <h2 className="text-lg font-semibold text-foreground">{assignment.title}</h2>
-                  {assignment.status === "completed" && assignment.score !== null ? (
-                    <p className="mt-1 text-sm text-emerald-600">Score: {assignment.score}%</p>
-                  ) : assignment.status === "in_progress" ? (
-                    <p className="mt-1 text-sm text-amber-600">In progress</p>
-                  ) : null}
-                </div>
+      <ChapterTabs
+        assignmentsContent={
+          loading ? (
+            <p className="text-muted-foreground">Loading assignments...</p>
+          ) : assignments.length === 0 ? (
+            <p className="text-center text-muted-foreground">No assignments for this chapter yet.</p>
+          ) : (
+            <div className="grid gap-4">
+              {assignments.map((assignment) => (
+                <Card
+                  key={assignment.studentAssignmentId}
+                  className={`rounded-2xl border ${
+                    assignment.isLocked
+                      ? "border-border bg-muted/40 opacity-80"
+                      : "border-white/20 bg-background/75 shadow-lg shadow-foreground/5"
+                  }`}
+                >
+                  <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Assignment {assignment.orderIndex}</p>
+                      <h2 className="text-lg font-semibold text-foreground">{assignment.title}</h2>
+                      {assignment.status === "completed" && assignment.score !== null ? (
+                        <p className="mt-1 text-sm text-emerald-600">Score: {assignment.score}%</p>
+                      ) : assignment.status === "in_progress" ? (
+                        <p className="mt-1 text-sm text-amber-600">In progress</p>
+                      ) : null}
+                    </div>
 
-                {assignment.status === "locked" ? (
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm text-muted-foreground">
-                    <Lock className="h-4 w-4" />
-                    Locked by teacher
-                  </div>
-                ) : assignment.status === "completed" ? (
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Completed
-                  </div>
-                ) : (
-                  <Button asChild className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">
-                    <Link href={`/student/assignment/${assignment.studentAssignmentId}`}>
-                      <Play className="mr-2 h-4 w-4" />
-                      {assignment.status === "in_progress" ? "Continue" : "Start"}
-                    </Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                    {assignment.status === "locked" ? (
+                      <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        Locked by teacher
+                      </div>
+                    ) : assignment.status === "completed" ? (
+                      <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Completed
+                      </div>
+                    ) : (
+                      <Button asChild className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">
+                        <Link href={`/student/assignment/${assignment.studentAssignmentId}`}>
+                          <Play className="mr-2 h-4 w-4" />
+                          {assignment.status === "in_progress" ? "Continue" : "Start"}
+                        </Link>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
+        }
+        materialsContent={
+          <div className="py-4 text-center">
+            <h2 className="mb-2 text-lg font-semibold text-foreground">Chapter materials</h2>
+            <p className="mb-6 text-muted-foreground">
+              Study guides and reference materials for {chapterTitle} will appear here.
+            </p>
+            <Button asChild variant="outline" className="rounded-xl">
+              <a href="#" onClick={(e) => e.preventDefault()}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View materials (coming soon)
+              </a>
+            </Button>
+          </div>
+        }
+      />
     </StudentShell>
   );
 }
