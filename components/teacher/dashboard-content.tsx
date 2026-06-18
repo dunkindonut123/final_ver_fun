@@ -1,17 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import StudentManagementModal from "@/components/StudentManagementModal";
+import { CreateClassroomDialog } from "@/components/teacher/create-classroom-dialog";
+import { TeacherShell } from "@/components/layout/teacher-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LogOut, Copy, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Check, Plus, Users } from "lucide-react";
 
-interface Student {
+interface Classroom {
   id: string;
-  first_name: string;
-  last_name: string;
+  name: string;
+  class_code: string;
+  hsk_level: number;
+  student_count: number;
 }
 
 interface TeacherDashboardContentProps {
@@ -19,187 +23,125 @@ interface TeacherDashboardContentProps {
     id: string;
     name: string;
     email: string;
-    teacherCode: string;
   };
 }
 
 export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProps) {
-  const router = useRouter();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const loadClassrooms = async () => {
+    const supabase = createClient();
+    const { data: classroomRows } = await supabase
+      .from("classrooms")
+      .select("id, name, class_code, hsk_level")
+      .eq("teacher_id", teacher.id)
+      .order("created_at", { ascending: false });
+
+    if (!classroomRows) {
+      setClassrooms([]);
+      setLoading(false);
+      return;
+    }
+
+    const withCounts = await Promise.all(
+      classroomRows.map(async (classroom) => {
+        const { count } = await supabase
+          .from("students")
+          .select("user_id", { count: "exact", head: true })
+          .eq("classroom_id", classroom.id);
+
+        return {
+          ...classroom,
+          student_count: count ?? 0,
+        };
+      })
+    );
+
+    setClassrooms(withCounts);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const loadStudents = async () => {
-      try {
-        const supabase = createClient();
-
-        const { data: studentsData, error: studentsError } = await supabase
-          .from("students")
-          .select("user_id")
-          .eq("teacher_id", teacher.id)
-          .order("created_at", { ascending: false });
-
-        if (studentsError) {
-          setError("Failed to load students");
-          return;
-        }
-
-        const studentIds = (studentsData ?? []).map((row) => row.user_id);
-
-        if (studentIds.length === 0) {
-          setStudents([]);
-          return;
-        }
-
-        const { data: studentProfiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", studentIds);
-
-        if (profilesError) {
-          setError("Failed to load students");
-          return;
-        }
-
-        const mappedStudents: Student[] = (studentProfiles ?? []).map((profile) => {
-          const fullName = (profile.full_name ?? "Student").trim();
-          const [firstName, ...rest] = fullName.split(/\s+/);
-
-          return {
-            id: profile.id,
-            first_name: firstName || "Student",
-            last_name: rest.join(" "),
-          };
-        });
-
-        setStudents(mappedStudents);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStudents();
+    void loadClassrooms();
   }, [teacher.id]);
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/signin");
-    router.refresh();
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
   };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(teacher.teacherCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-100">
-        <div className="text-center">
-          <div className="mb-4 text-2xl">Loading...</div>
-          <p className="text-slate-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-100 p-4">
-        <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-lg">
-          <h1 className="mb-2 text-2xl font-bold text-red-600">Error</h1>
-          <p className="mb-4 text-slate-600">{error}</p>
-          <Button onClick={handleLogout}>Log Out</Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100">
-      <div className="bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">My Classroom</h1>
-            <p className="text-slate-600">Welcome back, {teacher.name}</p>
-          </div>
-          <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
-            <LogOut size={18} />
-            Log Out
-          </Button>
+    <TeacherShell>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">My Classrooms</h1>
+          <p className="text-muted-foreground">Welcome back, {teacher.name}</p>
         </div>
+        <Button
+          onClick={() => setDialogOpen(true)}
+          className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New classroom
+        </Button>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <Card className="mb-8 rounded-lg border-0 p-0 shadow-md">
-          <CardContent className="p-6">
-            <h2 className="mb-3 text-xl font-bold text-slate-900">Your Teacher Code</h2>
-            <div className="flex items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-              <code className="flex-1 text-lg font-mono font-bold text-indigo-900">
-                {teacher.teacherCode}
-              </code>
-              <Button onClick={handleCopyCode} size="sm" variant="outline" className="flex items-center gap-2">
-                {copied ? (
-                  <>
-                    <Check size={16} />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy size={16} />
-                    Copy
-                  </>
-                )}
-              </Button>
-            </div>
-            <p className="mt-2 text-sm text-slate-600">
-              Share this code with your students so they can join your classroom.
+      {loading ? (
+        <p className="text-muted-foreground">Loading classrooms...</p>
+      ) : classrooms.length === 0 ? (
+        <Card className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
+          <CardContent className="p-12 text-center">
+            <p className="text-lg text-muted-foreground">
+              No classrooms yet. Create one to get a class code for students.
             </p>
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {classrooms.map((classroom) => (
+            <Card
+              key={classroom.id}
+              className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5 transition-all hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              <CardContent className="p-6">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">{classroom.name}</h2>
+                    <Badge className="mt-2 rounded-full bg-[#1e5fa8] text-white">HSK {classroom.hsk_level}</Badge>
+                  </div>
+                  <div className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    {classroom.student_count}
+                  </div>
+                </div>
 
-        <div>
-          <h2 className="mb-6 text-2xl font-bold text-slate-900">My Students ({students.length})</h2>
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#1e5fa8]/20 bg-[#1e5fa8]/5 p-3">
+                  <code className="flex-1 font-mono text-sm font-bold text-[#1e5fa8]">{classroom.class_code}</code>
+                  <Button size="sm" variant="outline" onClick={() => handleCopy(classroom.class_code)}>
+                    {copiedCode === classroom.class_code ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
 
-          {students.length === 0 ? (
-            <div className="rounded-lg bg-white p-12 text-center shadow-md">
-              <p className="text-lg text-slate-600">
-                No students yet. Share your teacher code to get started!
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {students.map((student) => (
-                <button
-                  key={student.id}
-                  onClick={() => setSelectedStudent(student)}
-                  className="rounded-lg bg-white p-6 text-left shadow-md transition-shadow hover:shadow-lg"
-                >
-                  <h3 className="text-lg font-bold text-slate-900">
-                    {student.first_name} {student.last_name}
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-600">Click to manage</p>
-                </button>
-              ))}
-            </div>
-          )}
+                <Button asChild className="w-full rounded-xl" variant="outline">
+                  <Link href={`/teacher/classroom/${classroom.id}`}>View classroom</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </div>
+      )}
 
-      {selectedStudent ? (
-        <StudentManagementModal
-          studentId={selectedStudent.id}
-          studentName={`${selectedStudent.first_name} ${selectedStudent.last_name}`.trim()}
-          onClose={() => setSelectedStudent(null)}
-        />
-      ) : null}
-    </div>
+      <CreateClassroomDialog
+        teacherId={teacher.id}
+        teacherName={teacher.name}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCreated={() => void loadClassrooms()}
+      />
+    </TeacherShell>
   );
 }

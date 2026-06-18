@@ -8,35 +8,28 @@ export default async function StudentDashboard() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/signin");
-  }
+  if (!user) redirect("/login");
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("id, email, full_name, role")
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile) {
-    redirect("/signin");
+  if (!profile || profile.role !== "student") {
+    redirect(profile?.role === "teacher" ? "/teacher/dashboard" : profile?.role === "admin" ? "/admin/dashboard" : "/login");
   }
 
-  if (profile.role !== "student") {
-    redirect(profile.role === "teacher" ? "/teacher/dashboard" : "/signin");
-  }
-
-  const { data: studentProgress, error: studentError } = await supabase
+  const { data: studentProgress } = await supabase
     .from("students")
-    .select("current_hsk_level, current_bab, current_pertemuan, teacher_id")
+    .select("current_hsk_level, teacher_id, classroom_id")
     .eq("user_id", user.id)
     .single();
 
-  if (studentError || !studentProgress) {
-    redirect("/signin");
-  }
+  if (!studentProgress) redirect("/login");
 
   let teacher: { name: string; email: string } | null = null;
+  let classroom: { name: string } | null = null;
 
   if (studentProgress.teacher_id) {
     const { data: teacherProfile } = await supabase
@@ -53,19 +46,28 @@ export default async function StudentDashboard() {
     }
   }
 
-  const student = {
-    id: profile.id,
-    name: profile.full_name ?? "Student",
-    email: profile.email,
-    current_hsk_level: studentProgress.current_hsk_level,
-    current_bab: studentProgress.current_bab,
-    current_pertemuan: studentProgress.current_pertemuan,
-    teacher,
-  };
+  if (studentProgress.classroom_id) {
+    const { data: classroomRow } = await supabase
+      .from("classrooms")
+      .select("name")
+      .eq("id", studentProgress.classroom_id)
+      .single();
 
-  if (!student) {
-    redirect("/signin");
+    if (classroomRow) {
+      classroom = { name: classroomRow.name };
+    }
   }
 
-  return <StudentDashboardContent student={student} />;
+  return (
+    <StudentDashboardContent
+      student={{
+        id: profile.id,
+        name: profile.full_name ?? "Student",
+        email: profile.email,
+        current_hsk_level: studentProgress.current_hsk_level,
+        teacher,
+        classroom,
+      }}
+    />
+  );
 }

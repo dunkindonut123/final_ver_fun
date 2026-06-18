@@ -42,9 +42,25 @@ npm install
 2. In the Supabase dashboard, navigate to **SQL Editor**
 3. Create a new query and paste the contents of [supabase/schema.sql](supabase/schema.sql)
 4. Execute the query to create all required tables and functions
-5. In **Authentication → Providers → Email**:
+5. Run LMS v2 migrations in order (existing databases only):
+   - First: [supabase/migration_v2_lms_step1_enums.sql](supabase/migration_v2_lms_step1_enums.sql) — run alone, wait for success
+   - Then: [supabase/migration_v2_lms.sql](supabase/migration_v2_lms.sql)
+   - Then: [supabase/fix_profiles_rls_recursion.sql](supabase/fix_profiles_rls_recursion.sql)
+   - Then: [supabase/migration_v2_admin_portal.sql](supabase/migration_v2_admin_portal.sql) — admin/teacher RLS **plus** the admin-portal schema additions:
+     - `hsk_chapters.description` (chapter description shown to students)
+     - `student_assignments.started_at` (drives the "in progress" status)
+     - a unique partial index enforcing one pending `promotion_flags` row per student
+6. In **Authentication → Providers → Email**:
    - Enable email/password auth
    - **Disable** "Confirm email" (required for current signup flow)
+7. Seed an admin account (private, not linked from the public site):
+   - Create a user in **Authentication → Users**
+   - Insert a profile row:
+     ```sql
+     insert into public.profiles (id, email, full_name, role, status)
+     values ('<auth-user-uuid>', 'admin@funmandarin.com', 'Admin', 'admin', 'active');
+     ```
+   - Admin login: `/admin/login`
 
 ### 3. Configure Environment Variables
 
@@ -93,22 +109,31 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to see the a
 ## 🔐 Authentication Flow
 
 ### Student Sign Up
-1. User creates account with email/password
-2. System creates `profiles` row with role `student`
-3. User must provide valid teacher code
-4. System creates `students` row linked to teacher
-5. Redirects to student dashboard
+1. User creates account with email/password and a **class code** (from their teacher's classroom)
+2. System creates `profiles` row with role `student`, status `active`
+3. System links student to `classroom_id`, `teacher_id`, and HSK level from the classroom
+4. System seeds `student_assignments` for all assignments in that HSK level (all locked)
+5. Redirects to `/login` with success message
 
 ### Teacher Sign Up
 1. User creates account with email/password
-2. System creates `profiles` row with role `teacher`
-3. System generates unique teacher code
-4. System creates `teachers` row
-5. Redirects to teacher dashboard
+2. System creates `profiles` row with role `teacher`, status `pending`
+3. Admin approves via `/admin/dashboard`
+4. On approval, `teachers` row is created and teacher can log in
+5. Teacher creates classrooms and shares **class codes** with students
 
 ### Sign In
-- System checks `profiles.role` and redirects to appropriate dashboard
-- Server-side guards prevent accessing wrong dashboard URLs
+- Shared login at `/login` (alias: `/signin`)
+- Role-based redirect: student → `/student/dashboard`, teacher → `/teacher/dashboard`, admin → `/admin/dashboard`
+- Pending/rejected teachers cannot log in
+
+### Admin
+- Private login at `/admin/login` (not linked from public site)
+- Dashboard at `/admin/dashboard`: pending teacher approvals and promotion requests
+- Teachers at `/admin/teachers`: list all teachers, create active accounts directly
+- Students at `/admin/students`: reassign classroom, update HSK level, hard delete
+- Classrooms at `/admin/classrooms`: view all classrooms, create on behalf of teachers
+- Promotions at `/admin/promotions`: approve or reject HSK level-up requests
 
 ## 📦 Available Scripts
 

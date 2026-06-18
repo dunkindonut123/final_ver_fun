@@ -23,6 +23,10 @@ interface TypingGameProps {
   level: HSKLevel
 }
 
+interface TypingGamePropsWithPool extends TypingGameProps {
+  initialWordPool?: string[]
+}
+
 interface WordTileProps {
   wordState: WordState
   index: number
@@ -52,7 +56,7 @@ const WordTile = memo(function WordTile({ wordState, index }: WordTileProps) {
   )
 })
 
-export function TypingGame({ level }: TypingGameProps) {
+export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) {
   const [words, setWords] = useState<WordState[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [input, setInput] = useState("")
@@ -84,7 +88,8 @@ export function TypingGame({ level }: TypingGameProps) {
   }, [stats.correctWords, stats.incorrectWords])
 
   const initializeGame = useCallback(() => {
-    const newWords = generateWordSet(level, 100).map((word, index) => ({
+    const pool = initialWordPool ?? generateWordSet(level, 100)
+    const newWords = pool.map((word, index) => ({
       word,
       status: index === 0 ? "current" : "pending" as WordStatus,
       userInput: "",
@@ -158,7 +163,8 @@ export function TypingGame({ level }: TypingGameProps) {
           if (remainingWords.length > 0) {
             remainingWords[0] = { ...remainingWords[0], status: "current" }
           }
-          const newRowWords = generateWordSet(level, VISIBLE_WORD_COUNT).map((word) => ({
+          const refillPool = initialWordPool ?? generateWordSet(level, VISIBLE_WORD_COUNT)
+          const newRowWords = refillPool.map((word) => ({
             word,
             status: "pending" as WordStatus,
             userInput: "",

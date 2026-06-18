@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,56 +41,28 @@ export default function TeacherSignUpPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
+      const response = await fetch("/api/auth/signup/teacher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
       });
 
-      if (signUpError || !data.user) {
-        setError(signUpError?.message ?? "Unable to create account");
-        return;
-      }
+      const payload = await response.json();
 
-      if (!data.session) {
-        setError(
-          "Signup succeeded but no session was created. In Supabase, disable Email Confirm for this flow, then try again."
-        );
-        return;
-      }
-
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        email: formData.email,
-        full_name: formData.name,
-        role: "teacher",
-      });
-
-      if (profileError) {
-        setError(profileError.message);
-        return;
-      }
-
-      const { error: requestError } = await supabase.from("teacher_requests").insert({
-        name: formData.name,
-        email: formData.email,
-        message: null,
-      });
-
-      if (requestError) {
-        if (requestError.code === "23505") {
-          setError("A teacher request already exists for this email. Please contact admin.");
-        } else {
-          setError(requestError.message);
-        }
+      if (!response.ok) {
+        setError(payload.error ?? "Unable to create account");
         return;
       }
 
@@ -128,7 +99,7 @@ export default function TeacherSignUpPage() {
               <p className="mb-6 text-sm text-muted-foreground">
                 Your account is created. You can sign in with your own password after approval.
               </p>
-              <Link href="/signin">
+              <Link href="/login">
                 <Button variant="outline" className="h-11 w-full rounded-xl bg-transparent">
                   Back to Sign In
                 </Button>
@@ -247,7 +218,7 @@ export default function TeacherSignUpPage() {
             <p>
               Already have an account?{" "}
               <Link
-                href="/signin"
+                href="/login"
                 className="font-medium text-[#1e5fa8] hover:underline"
               >
                 Sign in

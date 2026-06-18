@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, CheckCircle2, Loader2, Lock } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const AssignmentBGame = dynamic(() => import("@/components/assignment-b-game").then((m) => m.AssignmentBGame), { ssr: false })
 
 interface AssignmentExerciseClientProps {
   chapterId: string;
@@ -64,14 +67,29 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
           return;
         }
 
-        const { data } = await supabase
-          .from("student_chapter_progress")
-          .select("chapter_id, score, is_completed, time_spent_minutes, last_accessed")
+        // Fetch assignment-specific progress rows first
+        const { data: assignmentRows } = await supabase
+          .from("student_assignment_progress")
+          .select("assignment_key, is_completed")
           .eq("student_id", userData.user.id)
-          .eq("chapter_id", chapterId)
-          .maybeSingle();
+          .eq("chapter_id", chapterId);
 
-        setCompletedAssignments(scoreToCompletedAssignments(data?.score ?? null));
+        if (assignmentRows && assignmentRows.length > 0) {
+          const completedKeys = assignmentRows.filter((r: any) => r.is_completed).map((r: any) => r.assignment_key);
+          // Count completed known keys
+          const knownKeys = ASSIGNMENT_STEPS.map((s) => s.key);
+          const completedCount = knownKeys.filter((k) => completedKeys.includes(k)).length;
+          setCompletedAssignments(completedCount);
+        } else {
+          const { data } = await supabase
+            .from("student_chapter_progress")
+            .select("chapter_id, score, is_completed, time_spent_minutes, last_accessed")
+            .eq("student_id", userData.user.id)
+            .eq("chapter_id", chapterId)
+            .maybeSingle();
+
+          setCompletedAssignments(scoreToCompletedAssignments(data?.score ?? null));
+        }
       } finally {
         setLoading(false);
       }
@@ -117,6 +135,22 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
         }
       );
 
+      // Also upsert into student_assignment_progress for this step
+      if (!error) {
+        try {
+          await supabase.from("student_assignment_progress").upsert(
+            {
+              student_id: userData.user.id,
+              chapter_id: chapterId,
+              assignment_key: stepKey,
+              is_completed: true,
+              completed_at: new Date().toISOString(),
+            },
+            { onConflict: "student_id,chapter_id,assignment_key" }
+          );
+        } catch {}
+      }
+
       if (error) {
         setStatusMessage(error.message);
         return;
@@ -142,10 +176,16 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
           <h1 className="text-3xl font-bold text-foreground">
             {stepConfig ? stepConfig.label : "Exercise"}
           </h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">
-            This is a placeholder exercise page for {chapterId}. The real exercise content will be
-            added here later.
-          </p>
+          {stepKey === "B" && isUnlocked ? (
+            <div className="mt-6">
+              <AssignmentBGame chapterId={chapterId} level={(level ?? 1) as any} />
+            </div>
+          ) : (
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              This is a placeholder exercise page for {chapterId}. The real exercise content will be
+              added here later.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">

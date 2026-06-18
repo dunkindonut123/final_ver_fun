@@ -250,7 +250,7 @@ export default function Home() {
                   ))}
                   <div className="pt-2 mt-2 border-t border-foreground/10 space-y-2">
                     <Link
-                      href="/signin"
+                      href="/login"
                       className="block w-full text-left px-4 py-3 text-sm font-medium hover:bg-foreground/5 rounded-xl transition-colors"
                     >
                       Sign In
@@ -266,7 +266,7 @@ export default function Home() {
               </details>
 
               <div className="hidden md:flex items-center gap-1.5 shrink-0">
-                <Link href="/signin">
+                <Link href="/login">
                   <Button variant="ghost" className="rounded-xl h-9 px-3">Sign In</Button>
                 </Link>
                 <Link href="/signup">

@@ -8,33 +8,29 @@ export default async function TeacherDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/signin");
-  }
+  if (!user) redirect("/login");
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name, role, status")
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile) {
-    redirect("/signin");
+  if (!profile || profile.role !== "teacher") {
+    redirect(profile?.role === "student" ? "/student/dashboard" : "/login");
   }
 
-  if (profile.role !== "teacher") {
-    redirect(profile.role === "student" ? "/student/dashboard" : "/signin");
+  if (profile.status === "pending" || profile.status === "rejected") {
+    redirect("/login");
   }
 
-  const { data: teacherRecord, error: teacherError } = await supabase
+  const { data: teacherRecord } = await supabase
     .from("teachers")
-    .select("teacher_code")
+    .select("user_id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (teacherError || !teacherRecord) {
-    redirect("/signin");
-  }
+  if (!teacherRecord) redirect("/login");
 
   return (
     <TeacherDashboardContent
@@ -42,7 +38,6 @@ export default async function TeacherDashboardPage() {
         id: profile.id,
         name: profile.full_name ?? "Teacher",
         email: profile.email,
-        teacherCode: teacherRecord.teacher_code,
       }}
     />
   );

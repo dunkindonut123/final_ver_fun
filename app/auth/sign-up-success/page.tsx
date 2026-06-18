@@ -45,7 +45,7 @@ export default async function SignUpSuccessPage({
               : "You can now sign in and start learning HSK with your teacher."}
           </p>
           <Button asChild className="h-11 w-full rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">
-            <Link href="/signin">Sign In</Link>
+            <Link href="/login">Sign In</Link>
           </Button>
           <Button asChild variant="outline" className="h-11 w-full rounded-xl bg-transparent">
             <Link href="/">Back to Home</Link>

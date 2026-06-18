@@ -239,3 +239,59 @@ export function generateWordSet(level: HSKLevel, count: number = 24): string[] {
   }
   return words
 }
+
+// Parse chapter number from an id like `hsk1-ch3` or `ch3`
+function parseChapterNumberFromId(chapterId?: string): number | null {
+  if (!chapterId) return null
+  const m = chapterId.match(/ch(\d+)/i)
+  if (!m) return null
+  const n = parseInt(m[1], 10)
+  if (Number.isNaN(n)) return null
+  return n
+}
+
+// Deterministic PRNG for seeded shuffles
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function seededShuffle<T>(arr: T[], seed: number) {
+  const result = arr.slice()
+  const rand = mulberry32(seed)
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    const tmp = result[i]
+    result[i] = result[j]
+    result[j] = tmp
+  }
+  return result
+}
+
+/**
+ * Generate a deterministic word set for a given HSK `level` and optional `chapterId`.
+ * When the pool has >= `count` unique words, return a deterministic slice/shuffle
+ * so each chapter yields a different but reproducible set.
+ */
+export function generateWordSetForChapter(level: HSKLevel, chapterId?: string, count: number = 100): string[] {
+  const pool = hsk2CharWords[level]
+  const chapterNumber = parseChapterNumberFromId(chapterId) ?? 1
+
+  if (pool.length >= count) {
+    const shuffled = seededShuffle(pool, chapterNumber)
+    return shuffled.slice(0, count)
+  }
+
+  // If not enough unique words, repeat deterministically by rotating
+  const result: string[] = []
+  let idx = (chapterNumber - 1) % pool.length
+  while (result.length < count) {
+    result.push(pool[idx % pool.length])
+    idx++
+  }
+  return result
+}

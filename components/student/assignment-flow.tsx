@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -42,6 +43,7 @@ function parseChapterInfo(chapterId: string): ChapterInfo {
 }
 
 export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
+  const router = useRouter();
   const [completedAssignments, setCompletedAssignments] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +52,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
     () => summaryFromChapterProgress(completedAssignments * 25),
     [completedAssignments]
   );
+  const isAssignmentBUnlocked = isAssignmentUnlocked("B", summary);
   const stepStates = useMemo(() => {
     return ASSIGNMENT_STEPS.map((step) => {
       const stepIndex = ASSIGNMENT_STEPS.findIndex((item) => item.key === step.key);
@@ -150,22 +153,33 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
                   </div>
 
                   {step.isUnlocked ? (
-                    <Button
-                      asChild
-                      className="min-w-[180px] rounded-xl"
-                      variant={step.isCompleted ? "secondary" : "default"}
+                    <a
+                      role="button"
+                      onClick={() =>
+                        router.push(
+                          `/typing-hanzi?hsk=${chapterInfo.hskLevel ?? 1}&assignment=A${levelNumber}&chapterId=${encodeURIComponent(
+                            chapterId
+                          )}`
+                        )
+                      }
+                      href={`/typing-hanzi?hsk=${chapterInfo.hskLevel ?? 1}&assignment=A${levelNumber}&chapterId=${encodeURIComponent(
+                        chapterId
+                      )}`}
+                      className={`inline-flex items-center justify-center gap-2 min-w-[180px] rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                        step.isCompleted
+                          ? "bg-secondary text-secondary-foreground"
+                          : "bg-primary text-primary-foreground"
+                      }`}
                     >
-                      <Link href={`/assignment/${chapterId}/exercise?assignment=A&level=${levelNumber}`}>
-                        {step.isCompleted ? (
-                          <>
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Review Exercise
-                          </>
-                        ) : (
-                          <>Open Exercise</>
-                        )}
-                      </Link>
-                    </Button>
+                      {step.isCompleted ? (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Review Hanzi Game
+                        </>
+                      ) : (
+                        <>Open Hanzi Game</>
+                      )}
+                    </a>
                   ) : (
                     <Button
                       type="button"
@@ -193,10 +207,10 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
             </p>
           </div>
           <Badge
-            className={summary.isComplete ? "rounded-full bg-emerald-500 text-white" : "rounded-full"}
-            variant={summary.isComplete ? undefined : "secondary"}
+            className={isAssignmentBUnlocked ? "rounded-full bg-emerald-500 text-white" : "rounded-full"}
+            variant={isAssignmentBUnlocked ? undefined : "secondary"}
           >
-            {summary.isComplete ? "Unlocked" : "Locked"}
+            {isAssignmentBUnlocked ? "Unlocked" : "Locked"}
           </Badge>
         </div>
 
@@ -207,25 +221,28 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
                 Final Assignment B
               </h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                {summary.isComplete
+                {isAssignmentBUnlocked
                   ? "Open the final exercise placeholder for Assignment B."
                   : "Complete Assignment A Level 3 to unlock this final task."}
               </p>
             </div>
 
-            {summary.isComplete ? (
-              <Button asChild className="min-w-[180px] rounded-xl" variant="default">
-                <Link href={`/assignment/${chapterId}/exercise?assignment=B`}>
-                  {stepStates[3]?.isCompleted ? (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Review Exercise
-                    </>
-                  ) : (
-                    <>Open Exercise</>
-                  )}
-                </Link>
-              </Button>
+            {isAssignmentBUnlocked ? (
+              <a
+                role="button"
+                onClick={() => router.push(`/assignment/${chapterId}/exercise?assignment=B`)}
+                href={`/assignment/${chapterId}/exercise?assignment=B`}
+                className="inline-flex items-center justify-center gap-2 min-w-[180px] rounded-xl px-4 py-2 text-sm font-medium transition-colors bg-primary text-primary-foreground"
+              >
+                {stepStates[3]?.isCompleted ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Review Exercise
+                  </>
+                ) : (
+                  <>Open Exercise</>
+                )}
+              </a>
             ) : (
               <Button
                 type="button"

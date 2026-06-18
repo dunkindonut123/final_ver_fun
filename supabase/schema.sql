@@ -10,7 +10,7 @@ begin
     join pg_namespace n on n.oid = t.typnamespace
     where t.typname = 'user_role' and n.nspname = 'public'
   ) then
-    create type public.user_role as enum ('student', 'teacher');
+    create type public.user_role as enum ('student', 'teacher', 'admin');
   end if;
 end
 $$;
@@ -288,6 +288,19 @@ using (
     where s.user_id = student_id and s.teacher_id = auth.uid()
   )
 );
+
+drop policy if exists "student_chapter_progress_insert_student" on public.student_chapter_progress;
+create policy "student_chapter_progress_insert_student"
+on public.student_chapter_progress for insert
+to authenticated
+with check (auth.uid() = student_id);
+
+drop policy if exists "student_chapter_progress_update_student" on public.student_chapter_progress;
+create policy "student_chapter_progress_update_student"
+on public.student_chapter_progress for update
+to authenticated
+using (auth.uid() = student_id)
+with check (auth.uid() = student_id);
 
 drop policy if exists "student_assignment_progress_select_student_or_teacher" on public.student_assignment_progress;
 create policy "student_assignment_progress_select_student_or_teacher"
