@@ -10,20 +10,21 @@ import {
   scoreToCompletedAssignments,
 } from "@/lib/assignment-progress"
 import {
-  getMandarinTypingQuestions,
   type AssignmentALevel,
-  type SupportedHskLevel,
+  type MandarinTypingQuestion,
 } from "@/lib/mandarin-typing-questions"
+import { QuestionsUnavailable } from "@/components/student/questions-unavailable"
 
 type GameState = "playing" | "finished"
 type SaveState = "idle" | "saving" | "saved" | "error"
 
 interface MandarinTypingGameProps {
-  hskLevel: SupportedHskLevel
+  hskLevel: number
   assignmentLevel: AssignmentALevel
   chapterId?: string
   studentAssignmentId?: string
   returnHref?: string
+  initialQuestions?: MandarinTypingQuestion[]
 }
 
 function normalizeInput(value: string) {
@@ -42,11 +43,9 @@ export function MandarinTypingGame({
   chapterId,
   studentAssignmentId,
   returnHref = "/student/dashboard",
+  initialQuestions,
 }: MandarinTypingGameProps) {
-  const questions = useMemo(
-    () => getMandarinTypingQuestions(hskLevel, assignmentLevel, chapterId),
-    [assignmentLevel, hskLevel, chapterId]
-  )
+  const questions = useMemo(() => initialQuestions ?? [], [initialQuestions])
   const totalQuestions = questions.length
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -237,6 +236,10 @@ export function MandarinTypingGame({
 
     void persistAssignmentCompletion()
   }, [gameState, persistAssignmentCompletion, saveState])
+
+  if (totalQuestions === 0) {
+    return <QuestionsUnavailable returnHref={returnHref} />
+  }
 
   if (gameState === "finished") {
     return (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin/require-admin";
 import { seedStudentAssignments } from "@/lib/lms/student-assignments";
+import { isValidHskLevel, hskLevelRangeLabel } from "@/lib/lms/hsk-levels";
 
 export async function PATCH(
   request: Request,
@@ -15,9 +16,9 @@ export async function PATCH(
     const newHskLevel = Number(body.hskLevel);
     const classroomId = typeof body.classroomId === "string" ? body.classroomId : "";
 
-    if (!classroomId || !Number.isInteger(newHskLevel) || newHskLevel < 1 || newHskLevel > 6) {
+    if (!classroomId || !isValidHskLevel(newHskLevel)) {
       return NextResponse.json(
-        { error: "Valid hskLevel (1–6) and classroomId are required." },
+        { error: `Valid hskLevel (${hskLevelRangeLabel()}) and classroomId are required.` },
         { status: 400 }
       );
     }

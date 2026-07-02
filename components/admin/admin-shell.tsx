@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: "/admin/teachers", label: "Teachers" },
   { href: "/admin/classrooms", label: "Classrooms" },
   { href: "/admin/promotions", label: "Promotions" },
+  { href: "/admin/questions", label: "Questions" },
 ];
 
 interface AdminShellProps {

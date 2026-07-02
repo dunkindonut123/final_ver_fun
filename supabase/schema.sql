@@ -51,7 +51,7 @@ create table if not exists public.teacher_requests (
 create table if not exists public.hsk_chapters (
   id text primary key,
   title text not null,
-  hsk_level int not null check (hsk_level between 1 and 6),
+  hsk_level int not null check (hsk_level between 1 and 9),
   chapter_number int not null check (chapter_number between 1 and 10),
   created_at timestamptz not null default now(),
   unique (hsk_level, chapter_number)
@@ -92,7 +92,7 @@ select
   format('Chapter %s', chapter_num),
   level_num,
   chapter_num
-from generate_series(1, 6) as level_num
+from generate_series(1, 9) as level_num
 cross join generate_series(1, 10) as chapter_num
 on conflict do nothing;
 

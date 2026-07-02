@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateClassCode } from "@/lib/lms/classroom";
+import { HSK_LEVELS } from "@/lib/lms/hsk-levels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,7 +100,7 @@ export function CreateClassroomDialog({
               onChange={(e) => handleHskChange(e.target.value)}
               className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
             >
-              {[1, 2, 3, 4, 5, 6].map((level) => (
+              {HSK_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   HSK {level}
                 </option>

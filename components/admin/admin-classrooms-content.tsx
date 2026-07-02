@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { HSK_LEVELS, MAX_HSK_LEVEL } from "@/lib/lms/hsk-levels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -237,7 +238,7 @@ export function AdminClassroomsContent() {
     setModal(mode);
     setError(null);
     setClassroomId("");
-    setNewHskLevel(String(Math.min(6, student.hskLevel + 1)));
+    setNewHskLevel(String(Math.min(MAX_HSK_LEVEL, student.hskLevel + 1)));
   };
 
   const closeModal = () => {
@@ -499,7 +500,7 @@ export function AdminClassroomsContent() {
                 onChange={(e) => handleHskChange(e.target.value)}
                 className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
               >
-                {[1, 2, 3, 4, 5, 6].map((level) => (
+                {HSK_LEVELS.map((level) => (
                   <option key={level} value={level}>
                     HSK {level}
                   </option>
@@ -604,7 +605,7 @@ export function AdminClassroomsContent() {
                   }}
                   className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
                 >
-                  {[1, 2, 3, 4, 5, 6].map((level) => (
+                  {HSK_LEVELS.map((level) => (
                     <option key={level} value={level}>
                       HSK {level}
                     </option>

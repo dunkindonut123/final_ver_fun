@@ -1,11 +1,9 @@
 "use client"
 
-import Link from "next/link"
-import { Home, RotateCcw } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 
 import type React from "react"
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
-import { generateWordSet, hskLevelInfo, type HSKLevel } from "@/lib/hanzi-data"
 
 type WordStatus = "pending" | "current" | "correct" | "incorrect"
 
@@ -20,11 +18,7 @@ const WORDS_PER_ROW = 9
 const VISIBLE_WORD_COUNT = WORDS_PER_ROW * 2
 
 interface TypingGameProps {
-  level: HSKLevel
-}
-
-interface TypingGamePropsWithPool extends TypingGameProps {
-  initialWordPool?: string[]
+  initialWordPool: string[]
 }
 
 interface WordTileProps {
@@ -56,7 +50,7 @@ const WordTile = memo(function WordTile({ wordState, index }: WordTileProps) {
   )
 })
 
-export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) {
+export function TypingGame({ initialWordPool }: TypingGameProps) {
   const [words, setWords] = useState<WordState[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [input, setInput] = useState("")
@@ -69,7 +63,6 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
     correctKeystrokes: 0,
   })
   const inputRef = useRef<HTMLInputElement>(null)
-  const levelInfo = hskLevelInfo[level]
   const visibleWords = useMemo(() => words.slice(0, VISIBLE_WORD_COUNT), [words])
   const formattedTime = useMemo(() => {
     const mins = Math.floor(timeLeft / 60)
@@ -88,8 +81,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
   }, [stats.correctWords, stats.incorrectWords])
 
   const initializeGame = useCallback(() => {
-    const pool = initialWordPool ?? generateWordSet(level, 100)
-    const newWords = pool.map((word, index) => ({
+    const newWords = initialWordPool.map((word, index) => ({
       word,
       status: index === 0 ? "current" : "pending" as WordStatus,
       userInput: "",
@@ -105,7 +97,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
       totalKeystrokes: 0,
       correctKeystrokes: 0,
     })
-  }, [level])
+  }, [initialWordPool])
 
   useEffect(() => {
     initializeGame()
@@ -163,8 +155,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
           if (remainingWords.length > 0) {
             remainingWords[0] = { ...remainingWords[0], status: "current" }
           }
-          const refillPool = initialWordPool ?? generateWordSet(level, VISIBLE_WORD_COUNT)
-          const newRowWords = refillPool.map((word) => ({
+          const newRowWords = initialWordPool.map((word) => ({
             word,
             status: "pending" as WordStatus,
             userInput: "",
@@ -199,7 +190,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
       
       setInput("")
     }
-  }, [currentIndex, gameState, input, level, words])
+  }, [currentIndex, gameState, input, initialWordPool, words])
 
   if (gameState === "finished") {
     return (
@@ -220,9 +211,6 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
 
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex justify-between text-foreground">
-              <span>{levelInfo.name}</span>
-            </div>
-            <div className="flex justify-between text-foreground">
               <span>Kata Benar</span>
               <span className="text-green-600">{stats.correctWords}</span>
             </div>
@@ -236,14 +224,7 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-4 pt-4">
-            <Link
-              href="/"
-              className="flex items-center gap-2 px-6 py-3 border border-border rounded-lg text-foreground hover:border-primary hover:text-primary transition-colors"
-            >
-              <Home className="w-5 h-5" />
-              <span>Beranda</span>
-            </Link>
+          <div className="flex items-center justify-center pt-4">
             <button
               onClick={initializeGame}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -260,20 +241,6 @@ export function TypingGame({ level, initialWordPool }: TypingGamePropsWithPool) 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-5xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-center gap-4">
-          <Link 
-            href="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Home className="w-4 h-4" />
-          </Link>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="w-2 h-2 rounded-full bg-primary" />
-            <span>{levelInfo.name}</span>
-          </div>
-        </div>
-
         {/* Timer */}
         <div className="text-center">
           <div className="text-4xl font-bold text-primary tabular-nums">

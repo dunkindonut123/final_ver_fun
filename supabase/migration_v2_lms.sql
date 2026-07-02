@@ -26,7 +26,7 @@ create table if not exists public.classrooms (
   name text not null,
   class_code text unique not null,
   teacher_id uuid not null references public.profiles(id) on delete cascade,
-  hsk_level int not null check (hsk_level between 1 and 6),
+  hsk_level int not null check (hsk_level between 1 and 9),
   created_at timestamptz not null default now()
 );
 

@@ -15,8 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, CheckCircle2, Loader2, Lock } from "lucide-react";
 import dynamic from "next/dynamic";
+import { getQuestionsForAssignment, toWordPool } from "@/lib/lms/assignment-questions";
+import { QuestionsUnavailable } from "@/components/student/questions-unavailable";
 
-const AssignmentBGame = dynamic(() => import("@/components/assignment-b-game").then((m) => m.AssignmentBGame), { ssr: false })
+const AssignmentBGame = dynamic(
+  () => import("@/components/assignment-b-game").then((m) => m.AssignmentBGame),
+  { ssr: false }
+);
 
 interface AssignmentExerciseClientProps {
   chapterId: string;
@@ -46,6 +51,8 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [assignmentBWords, setAssignmentBWords] = useState<string[]>([]);
+  const [wordsLoading, setWordsLoading] = useState(false);
 
   const summary = useMemo(
     () => summaryFromChapterProgress(completedAssignments * 25),
@@ -97,6 +104,23 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
 
     loadProgress();
   }, [chapterId]);
+
+  useEffect(() => {
+    if (stepKey !== "B") return;
+
+    const loadWords = async () => {
+      setWordsLoading(true);
+      try {
+        const supabase = createClient();
+        const rows = await getQuestionsForAssignment(supabase, chapterId, "B");
+        setAssignmentBWords(rows.length > 0 ? toWordPool(rows) : []);
+      } finally {
+        setWordsLoading(false);
+      }
+    };
+
+    void loadWords();
+  }, [chapterId, stepKey]);
 
   const handleComplete = async () => {
     setSaving(true);
@@ -178,7 +202,16 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
           </h1>
           {stepKey === "B" && isUnlocked ? (
             <div className="mt-6">
-              <AssignmentBGame chapterId={chapterId} level={(level ?? 1) as any} />
+              {wordsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading exercise...</p>
+              ) : assignmentBWords.length > 0 ? (
+                <AssignmentBGame
+                  chapterId={chapterId}
+                  initialWordPool={assignmentBWords}
+                />
+              ) : (
+                <QuestionsUnavailable compact />
+              )}
             </div>
           ) : (
             <p className="mt-3 max-w-2xl text-muted-foreground">

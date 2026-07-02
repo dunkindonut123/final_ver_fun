@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentGameRouter } from "@/components/student/assignment-game-router";
+import {
+  getQuestionsForAssignment,
+  toMandarinTypingQuestions,
+  toWordPool,
+  type AssignmentKey,
+} from "@/lib/lms/assignment-questions";
+import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
 
 export default async function StudentAssignmentPage({
   params,
@@ -44,6 +51,18 @@ export default async function StudentAssignmentPage({
       .eq("id", row.id);
   }
 
+  const assignmentKey = assignment.assignment_key as AssignmentKey;
+  let mandarinQuestions;
+  let assignmentBWords;
+
+  if (isAssignmentALevel(assignmentKey)) {
+    const dbRows = await getQuestionsForAssignment(supabase, assignment.chapter_id, assignmentKey);
+    mandarinQuestions = dbRows.length > 0 ? toMandarinTypingQuestions(dbRows) : [];
+  } else if (assignmentKey === "B") {
+    const dbRows = await getQuestionsForAssignment(supabase, assignment.chapter_id, "B");
+    assignmentBWords = dbRows.length > 0 ? toWordPool(dbRows) : [];
+  }
+
   return (
     <AssignmentGameRouter
       studentAssignmentId={row.id}
@@ -53,6 +72,8 @@ export default async function StudentAssignmentPage({
       assignmentTitle={assignment.title}
       isLocked={row.is_locked}
       isCompleted={row.is_completed}
+      mandarinQuestions={mandarinQuestions}
+      assignmentBWords={assignmentBWords}
     />
   );
 }

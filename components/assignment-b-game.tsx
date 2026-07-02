@@ -2,18 +2,20 @@
 
 import React from "react"
 import { TypingGame } from "@/components/typing-game"
-import { generateWordSetForChapter, type HSKLevel } from "@/lib/hanzi-data"
+import { QuestionsUnavailable } from "@/components/student/questions-unavailable"
 
 interface AssignmentBGameProps {
   chapterId: string
-  level: HSKLevel
+  initialWordPool?: string[]
+  returnHref?: string
 }
 
-export function AssignmentBGame({ chapterId, level }: AssignmentBGameProps) {
-  // Generate a deterministic pool for the chapter and pass it to TypingGame
-  const pool = generateWordSetForChapter(level, chapterId, 200)
+export function AssignmentBGame({ initialWordPool, returnHref }: AssignmentBGameProps) {
+  if (!initialWordPool?.length) {
+    return <QuestionsUnavailable returnHref={returnHref} compact={Boolean(returnHref)} />
+  }
 
-  return <TypingGame level={level} initialWordPool={pool} />
+  return <TypingGame initialWordPool={initialWordPool} />
 }
 
 export default AssignmentBGame

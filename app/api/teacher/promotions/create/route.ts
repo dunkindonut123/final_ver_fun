@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTeacherApi } from "@/lib/teacher/require-teacher";
+import { MAX_HSK_LEVEL } from "@/lib/lms/hsk-levels";
 
 export async function POST(request: Request) {
   const auth = await requireTeacherApi();
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You do not manage this student." }, { status: 403 });
     }
 
-    if (student.current_hsk_level >= 6) {
+    if (student.current_hsk_level >= MAX_HSK_LEVEL) {
       return NextResponse.json(
         { error: "Student is already at the highest HSK level." },
         { status: 400 }

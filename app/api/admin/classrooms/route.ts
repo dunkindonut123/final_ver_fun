@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin/require-admin";
+import { isValidHskLevel, hskLevelRangeLabel } from "@/lib/lms/hsk-levels";
 import { normalizeClassCode } from "@/lib/lms/classroom";
 
 export async function GET() {
@@ -65,8 +66,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Name, teacher, and class code are required." }, { status: 400 });
     }
 
-    if (!Number.isInteger(hskLevel) || hskLevel < 1 || hskLevel > 6) {
-      return NextResponse.json({ error: "HSK level must be between 1 and 6." }, { status: 400 });
+    if (!isValidHskLevel(hskLevel)) {
+      return NextResponse.json({ error: `HSK level must be between ${hskLevelRangeLabel()}.` }, { status: 400 });
     }
 
     const { data: teacher, error: teacherError } = await auth.ctx.db

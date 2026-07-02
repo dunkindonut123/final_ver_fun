@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { MandarinTypingGame } from "@/components/mandarin-typing-game";
-import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
-import type { HSKLevel } from "@/lib/hanzi-data";
+import { isAssignmentALevel, type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { QuestionsUnavailable } from "@/components/student/questions-unavailable";
+import { ArrowLeft } from "lucide-react";
 
 const AssignmentBGame = dynamic(
   () => import("@/components/assignment-b-game").then((m) => m.AssignmentBGame),
@@ -23,6 +22,8 @@ interface AssignmentGameRouterProps {
   assignmentTitle: string;
   isLocked: boolean;
   isCompleted: boolean;
+  mandarinQuestions?: MandarinTypingQuestion[];
+  assignmentBWords?: string[];
 }
 
 export function AssignmentGameRouter({
@@ -33,35 +34,10 @@ export function AssignmentGameRouter({
   assignmentTitle,
   isLocked,
   isCompleted,
+  mandarinQuestions,
+  assignmentBWords,
 }: AssignmentGameRouterProps) {
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const returnHref = `/student/chapter/${chapterId}`;
-
-  const handleCompleteB = async () => {
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`/api/student/assignments/${studentAssignmentId}/complete`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ score: 100 }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        setMessage(payload.error ?? "Failed to save progress.");
-        return;
-      }
-
-      setMessage("Assignment marked complete.");
-    } catch {
-      setMessage("Failed to save progress.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (isLocked) {
     return (
@@ -80,6 +56,10 @@ export function AssignmentGameRouter({
   }
 
   if (assignmentKey === "B") {
+    if (!assignmentBWords?.length) {
+      return <QuestionsUnavailable returnHref={returnHref} />;
+    }
+
     return (
       <div>
         <div className="border-b border-border bg-background px-4 py-3">
@@ -88,33 +68,33 @@ export function AssignmentGameRouter({
               <ArrowLeft className="h-4 w-4" />
               {assignmentTitle}
             </Link>
-            {!isCompleted ? (
-              <Button
-                onClick={handleCompleteB}
-                disabled={saving}
-                className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark Complete"}
-              </Button>
-            ) : (
+            {isCompleted ? (
               <span className="text-sm text-emerald-600">Completed</span>
-            )}
+            ) : null}
           </div>
-          {message ? <p className="mx-auto mt-2 max-w-6xl text-sm text-muted-foreground">{message}</p> : null}
         </div>
-        <AssignmentBGame chapterId={chapterId} level={hskLevel as HSKLevel} />
+        <AssignmentBGame
+          chapterId={chapterId}
+          initialWordPool={assignmentBWords}
+          returnHref={returnHref}
+        />
       </div>
     );
   }
 
   if (isAssignmentALevel(assignmentKey)) {
+    if (!mandarinQuestions?.length) {
+      return <QuestionsUnavailable returnHref={returnHref} />;
+    }
+
     return (
       <MandarinTypingGame
-        hskLevel={hskLevel as 1 | 2 | 3 | 4}
+        hskLevel={hskLevel}
         assignmentLevel={assignmentKey}
         chapterId={chapterId}
         studentAssignmentId={studentAssignmentId}
         returnHref={returnHref}
+        initialQuestions={mandarinQuestions}
       />
     );
   }
