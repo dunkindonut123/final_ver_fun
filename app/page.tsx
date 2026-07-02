@@ -1,20 +1,16 @@
-"use client"
-
 import Link from "next/link"
 import Image from 'next/image'
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { courseDetails } from "@/lib/courses-data"
 import {
   BookOpen,
-  Clock,
   Users,
   Award,
   TrendingUp,
   Star,
   ArrowRight,
   Menu,
-  X,
   MessageSquare,
   Sparkles,
   GraduationCap,
@@ -22,7 +18,6 @@ import {
   MapPin,
   Phone,
   Mail,
-  Gamepad2,
 } from "lucide-react"
 
 // Fun Mandarin Logo Component
@@ -114,51 +109,7 @@ const googleReviews = [
   },
 ]
 
-// Course Data
-const courses = [
-  {
-    id: "fun-kids",
-    title: "FUN Kids",
-    subtitle: "TK 4-6 Tahun",
-    badge: "Mandarin Dasar",
-    description: "Belajar Mandarin melalui lagu dan permainan interaktif untuk usia dini.",
-    hours: 7,
-    rating: 4.9,
-    students: "12K",
-    price: 150,
-    color: "from-[#e53935]/10 to-[#e53935]/5",
-    accent: "#e53935",
-    image: "/images/funkids.jpg",
-  },
-  {
-    id: "fun-primary",
-    title: "FUN Primary",
-    subtitle: "SD 6-12 Tahun",
-    badge: "Mandarin Sekolah",
-    description: "Fokus pada penguatan kosakata dan tata bahasa dengan metode kreatif.",
-    hours: 1,
-    rating: 4.8,
-    students: "8.5K",
-    price: 200,
-    color: "from-[#1e5fa8]/10 to-[#1e5fa8]/5",
-    accent: "#1e5fa8",
-    image: "/images/funprimary.jpg",
-  },
-  {
-    id: "fun-conversation",
-    title: "FUN Conversation",
-    subtitle: "SMP-Dewasa",
-    badge: "Percakapan",
-    description: "Tingkatkan rasa percaya diri berbicara Mandarin untuk akademis & karir.",
-    hours: 18,
-    rating: 4.9,
-    students: "10K",
-    price: 250,
-    color: "from-[#f9a825]/10 to-[#f9a825]/5",
-    accent: "#f9a825",
-    image: "/images/funconversation.jpg",
-  },
-]
+const courses = Object.values(courseDetails)
 
 // Features Data
 const features = [
@@ -213,11 +164,8 @@ const timeline = [
   },
 ]
 
-// Review Card component with expand functionality
+// Review card stays static to keep the page server-rendered.
 function ReviewCard({ review }: { review: typeof googleReviews[0] }) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const isLongText = review.text.length > 120
-
   return (
     <Card className="border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300">
       <CardContent className="p-6">
@@ -230,17 +178,7 @@ function ReviewCard({ review }: { review: typeof googleReviews[0] }) {
         
         {/* Review Text */}
         <div className="mb-6">
-          <p className={`text-sm text-muted-foreground leading-relaxed ${!isExpanded && isLongText ? 'line-clamp-3' : ''}`}>
-            {review.text}
-          </p>
-          {isLongText && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-sm font-medium text-[#1e5fa8] hover:text-[#1a5292] mt-2 transition-colors"
-            >
-              {isExpanded ? 'Show less' : 'Show more'}
-            </button>
-          )}
+          <p className="text-sm text-muted-foreground leading-relaxed">{review.text}</p>
         </div>
 
         {/* Reviewer */}
@@ -259,80 +197,84 @@ function ReviewCard({ review }: { review: typeof googleReviews[0] }) {
 }
 
 export default function Home() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" })
-    }
-    setIsMenuOpen(false)
-  }
-
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       {/* Header - Slick & Modern */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="mx-4 mt-3">
           <div className="max-w-6xl mx-auto bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg shadow-foreground/5">
-            <div className="flex items-center justify-between h-17 px-4 sm:px-6">
+            <div className="flex items-center justify-between h-17 px-3 sm:px-4 lg:px-6 gap-2 lg:gap-3 overflow-hidden">
               {/* Logo */}
 
-              <FunMandarinLogo className="h-16 w-auto" />
+              <FunMandarinLogo className="h-16 lg:h-20 xl:h-24 w-auto shrink-0" />
 
               {/* Desktop Navigation - Flex with Logo */}
-              <nav className="hidden md:flex items-center gap-1 ml-6 flex-1">
+              <nav className="hidden md:flex items-center gap-4 lg:gap-6 ml-3 lg:ml-5 flex-1 min-w-0 overflow-hidden">
                 {[
-                  { label: "Kursus", action: () => scrollToSection("courses") },
-                  { label: "Tentang", action: () => scrollToSection("about") },
-                  { label: "Berkompetisi", action: () => scrollToSection("games") },
-                  { label: "Komunitas", action: () => scrollToSection("testimonials") },
+                  { label: "Kursus", href: "#courses" },
+                  { label: "Tentang", href: "#about" },
+                  { label: "Komunitas", href: "#testimonials" },
                 ].map((item) => (
-                  <button
+                  <a
                     key={item.label}
-                    onClick={item.action}
-                    className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-foreground/10 rounded-xl transition-all duration-200"
+                    href={item.href}
+                    className="px-2 lg:px-3 py-2 text-sm lg:text-base whitespace-nowrap font-medium text-foreground/70 hover:text-foreground hover:bg-foreground/10 rounded-xl transition-all duration-200"
                   >
                     {item.label}
-                  </button>
+                  </a>
                 ))}
               </nav>
 
               {/* Mobile Menu Button */}
-              <button
-                className="md:hidden p-2 hover:bg-foreground/10 rounded-xl transition-colors"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                aria-label="Toggle menu"
-              >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
+              <details className="md:hidden relative shrink-0">
+                <summary className="list-none p-2 hover:bg-foreground/10 rounded-xl transition-colors cursor-pointer" aria-label="Toggle menu">
+                  <Menu className="h-5 w-5" />
+                </summary>
 
-              {/* Spacer for desktop to balance the layout */}
-              <div className="hidden md:block w-9" />
+                <div className="absolute right-0 mt-2 w-56 bg-background/95 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg p-4 space-y-1">
+                  {[
+                    { label: "Kursus", href: "#courses" },
+                    { label: "Tentang", href: "#about" },
+                    { label: "Berkompetisi", href: "#games" },
+                    { label: "Komunitas", href: "#testimonials" },
+                  ].map((item) => (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      className="block w-full text-left px-4 py-3 text-sm font-medium hover:bg-foreground/5 rounded-xl transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                  <div className="pt-2 mt-2 border-t border-foreground/10 space-y-2">
+                    <Link
+                      href="/login"
+                      className="block w-full text-left px-4 py-3 text-sm font-medium hover:bg-foreground/5 rounded-xl transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="block w-full px-4 py-3 text-sm font-medium text-center rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292] transition-colors"
+                    >
+                      SignUp
+                    </Link>
+                  </div>
+                </div>
+              </details>
+
+              <div className="hidden md:flex items-center gap-1.5 shrink-0">
+                <Link href="/login">
+                  <Button variant="ghost" className="rounded-xl h-9 px-3">Sign In</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button className="rounded-xl h-9 px-3 bg-[#1e5fa8] hover:bg-[#1a5292] text-white">SignUp</Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden mx-4 mt-2">
-            <div className="bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg p-4 space-y-1">
-                {[
-                  { label: "Kursus", action: () => scrollToSection("courses") },
-                  { label: "Tentang", action: () => scrollToSection("about") },
-                  { label: "Komunitas", action: () => scrollToSection("testimonials") },
-                ].map((item) => (
-                <button
-                  key={item.label}
-                  onClick={item.action}
-                  className="block w-full text-left px-4 py-3 text-sm font-medium hover:bg-foreground/5 rounded-xl transition-colors"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Hero Section - Modern & Clean */}
@@ -374,19 +316,23 @@ export default function Home() {
                 <Button
                   size="lg"
                   className="bg-[#1e5fa8] hover:bg-[#1a5292] text-white gap-2 rounded-xl text-base font-semibold px-6 h-12 shadow-lg shadow-[#1e5fa8]/25 hover:shadow-xl hover:shadow-[#1e5fa8]/30 transition-all duration-300"
-                  onClick={() => scrollToSection("courses")}
+                  asChild
                 >
-                  Jelajahi Kursus
-                  <ArrowRight className="h-4 w-4" />
+                  <a href="#courses">
+                    Jelajahi Kursus
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
                   className="gap-2 rounded-xl text-base font-semibold px-6 h-12 bg-transparent hover:bg-foreground/5 transition-all duration-300"
-                  onClick={() => scrollToSection("about")}
+                  asChild
                 >
-                  <Play className="h-4 w-4" />
-                  Pelajari Lebih Lanjut
+                  <a href="#about">
+                    <Play className="h-4 w-4" />
+                    Pelajari Lebih Lanjut
+                  </a>
                 </Button>
               </div>
 
@@ -427,10 +373,11 @@ export default function Home() {
                   
                   {/* Center content - Image fills the space */}
                   <div className="flex-1 relative rounded-2xl overflow-hidden my-4">
-                    <img 
-                      src="/images/heropict.jpg" 
-                      alt="test image" 
-                      className="w-full h-full object-cover"
+                    <Image
+                      src="/images/heropict.jpg"
+                      alt="FUN Mandarin students in class"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                   
@@ -465,8 +412,8 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course, index) => (
-              <Link key={index} href={`/course/${course.id}`} className="block h-full" scroll={true}>
+            {courses.map((course) => (
+              <Link key={course.id} href={`/course/${course.id}`} className="block h-full" scroll={true}>
                 <Card 
                   className="group overflow-hidden border-0 shadow-lg shadow-foreground/5 hover:shadow-xl hover:shadow-foreground/10 transition-all duration-300 hover:-translate-y-1 h-full cursor-pointer"
                 >
@@ -517,31 +464,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Games CTA Section */}
-      <section id="games" className="py-20 lg:py-28 bg-secondary/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-[#1e5fa8]/10 px-4 py-2 rounded-full mb-6">
-            <Gamepad2 className="h-4 w-4 text-[#1e5fa8]" />
-            <span className="text-sm font-medium text-[#1e5fa8]">Hanzi Type</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            <span className="bg-gradient-to-r from-[#1e5fa8] via-[#e53935] to-[#f9a825] bg-clip-text text-transparent">
-              Kompetisi
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Berkompetisi dalam Permainan Mengetik Mandarin yang cepat. Uji kemampuan mengetik dan pengenalan karakter Anda
-          </p>
-          <a href="/games">
-            <Button className="bg-[#1e5fa8] hover:bg-[#1a5292] text-white gap-2 rounded-xl text-base font-semibold px-8 h-12 shadow-lg shadow-[#1e5fa8]/25">
-              <Gamepad2 className="h-4 w-4" />
-              Berkompetisi
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </a>
-        </div>
-      </section>
-
       {/* Why Choose Us Section - Modern Grid */}
       <section className="py-20 lg:py-28 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -556,9 +478,9 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((feature, index) => (
-              <div 
-                key={index} 
+            {features.map((feature) => (
+              <div
+                key={feature.title}
                 className="group p-6 rounded-2xl bg-secondary/50 hover:bg-[#1e5fa8]/5 border border-transparent hover:border-[#1e5fa8]/20 transition-all duration-300"
               >
                 <div className="w-12 h-12 rounded-xl bg-[#1e5fa8]/10 group-hover:bg-[#1e5fa8] flex items-center justify-center mb-4 transition-colors duration-300">
@@ -596,7 +518,7 @@ export default function Home() {
               <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-px bg-[#1e5fa8]/20 transform md:-translate-x-1/2" />
               
               {timeline.map((item, index) => (
-                <div key={index} className="relative flex items-center mb-12 md:flex-row">
+                <div key={item.year} className="relative flex items-center mb-12 md:flex-row">
                   {/* Content */}
                   <div className="w-full md:w-1/2 pl-8 md:pl-0 md:pr-12 md:text-right">
                     <div className="bg-background rounded-2xl p-10 shadow-lg shadow-foreground/5 border border-border/50">
@@ -658,8 +580,8 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {googleReviews.map((review, index) => (
-              <ReviewCard key={index} review={review} />
+            {googleReviews.map((review) => (
+              <ReviewCard key={review.name} review={review} />
             ))}
           </div>
 
@@ -692,7 +614,7 @@ export default function Home() {
       {/* Footer - Modern & Clean */}
       <footer className="bg-foreground text-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10">
             <div className="lg:col-span-2">
               <FunMandarinLogo className="h-12 w-auto brightness-200 mb-4" />
               <p className="text-background/60 text-sm max-w-sm leading-relaxed">
@@ -707,13 +629,54 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <div className="lg:col-span-2">
+              <h4 className="font-semibold mb-5 text-lg">Hours</h4>
+              <div className="grid md:grid-cols-2 gap-4 text-sm text-background/60">
+                <div className="rounded-xl border border-background/10 p-4 space-y-3">
+                  <p className="font-medium text-background/90">Glodok</p>
+                  <p className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    Jl. Kemurnian IV No.35, Glodok, Kec. Taman Sari, Jakarta Barat
+                  </p>
+                  <div className="flex justify-between">
+                    <span>Mon - Fri</span>
+                    <span>9am - 6pm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Saturday</span>
+                    <span>9am - 4pm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sunday</span>
+                    <span>Closed</span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-background/10 p-4 space-y-3">
+                  <p className="font-medium text-background/90">Citywalk Gajah Mada</p>
+                  <p className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    Mall Citywalk Gajah Mada, Jakarta
+                  </p>
+                  <div className="flex justify-between">
+                    <span>Mon - Fri</span>
+                    <span>10am - 7pm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Saturday</span>
+                    <span>10am - 5pm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sunday</span>
+                    <span>Closed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div>
               <h4 className="font-semibold mb-5 text-lg">Contact</h4>
               <div className="space-y-3 text-sm text-background/60">
-                <p className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  Jl. Kemurnian IV No.35, Glodok, Kec. Taman Sari, Jakarta Barat
-                </p>
+
                 <p className="flex items-center gap-3">
                   <Phone className="h-4 w-4 flex-shrink-0" />
                   (021) 6295371
@@ -724,23 +687,7 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <div>
-              <h4 className="font-semibold mb-5 text-lg">Hours</h4>
-              <div className="space-y-3 text-sm text-background/60">
-                <div className="flex justify-between">
-                  <span>Mon - Fri</span>
-                  <span>9am - 6pm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Saturday</span>
-                  <span>9am - 4pm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Sunday</span>
-                  <span>Closed</span>
-                </div>
-              </div>
-            </div>
+            
           </div>
           <div className="mt-12 pt-8 border-t border-background/10 text-center text-sm text-background/40">
             <p>2026 FUN Mandarin. All rights reserved.</p>

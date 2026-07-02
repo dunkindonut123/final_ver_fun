@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
+import Image from "next/image"
 
 export default function EnrollPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -55,7 +56,13 @@ export default function EnrollPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-10 w-auto" />
+              <Image
+                src="/images/fun-logo-00000.png"
+                alt="Fun Mandarin"
+                width={175}
+                height={40}
+                className="h-10 w-auto"
+              />
             </Link>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/">
@@ -163,9 +170,11 @@ export default function EnrollPage() {
               <Card className="p-6">
                 <h3 className="font-bold text-lg mb-4">Course Summary</h3>
                 <div className="aspect-video bg-muted rounded-lg mb-4 overflow-hidden">
-                  <img
+                  <Image
                     src="/classroom-students-teacher-learning-atmosphere.jpg"
                     alt="Course"
+                    width={640}
+                    height={360}
                     className="w-full h-full object-cover"
                   />
                 </div>

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 
 export const metadata = {
   title: "About Fun Mandarin - Learn Chinese Language",
@@ -13,7 +14,13 @@ export default function AboutPage() {
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-8 w-auto" />
+            <Image
+              src="/images/fun-logo-00000.png"
+              alt="Fun Mandarin"
+              width={140}
+              height={32}
+              className="h-8 w-auto"
+            />
           </Link>
           <Link href="/">
             <Button variant="outline">Back to Home</Button>
@@ -94,9 +101,11 @@ export default function AboutPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="flex justify-center">
             <div className="relative">
-              <img 
-                src="/fun-mandarin-founder-illustration.jpg" 
+              <Image
+                src="/aboutpict.png" 
                 alt="Founder of FUN Mandarin" 
+                width={640}
+                height={640}
                 className="w-full max-w-md rounded-lg"
               />
             </div>
@@ -137,32 +146,6 @@ export default function AboutPage() {
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             Di FUN Mandarin, kami tidak hanya mengajar bahasa Mandarin—kami menciptakan pengalaman belajar yang mengubah cara murid melihat pembelajaran. Dengan pendekatan yang inovatif dan personal, kami memastikan setiap siswa tidak hanya memahami bahasa, tetapi juga mencintai proses belajarnya.
           </p>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {[
-            {
-              number: "500+",
-              label: "Murid Puas",
-              description: "Ribuan siswa telah mempercayai kami untuk perjalanan belajar Mandarin mereka"
-            },
-            {
-              number: "95%",
-              label: "Tingkat Kepuasan",
-              description: "Mayoritas murid kami mengatakan belajar dengan FUN Mandarin menyenangkan dan efektif"
-            },
-            {
-              number: "10+",
-              label: "Tahun Pengalaman",
-              description: "Tim kami memiliki dedikasi puluhan tahun dalam mengajar bahasa Mandarin"
-            }
-          ].map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">{stat.number}</div>
-              <h3 className="text-lg font-bold mb-2">{stat.label}</h3>
-              <p className="text-muted-foreground text-sm">{stat.description}</p>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -207,8 +190,14 @@ export default function AboutPage() {
       <footer className="bg-secondary/20 border-t border-border py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <img src="/images/fun-logo-00000.png" alt="Fun Mandarin" className="h-8 w-auto mb-4 md:mb-0" />
-            <p className="text-muted-foreground text-sm">© 2024 FUN Mandarin. All rights reserved.</p>
+            <Image
+              src="/images/fun-logo-00000.png"
+              alt="Fun Mandarin"
+              width={140}
+              height={32}
+              className="h-8 w-auto mb-4 md:mb-0"
+            />
+            <p className="text-muted-foreground text-sm">© 2026 FUN Mandarin. All rights reserved.</p>
           </div>
         </div>
       </footer>
