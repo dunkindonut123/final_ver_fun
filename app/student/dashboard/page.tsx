@@ -31,26 +31,15 @@ export default async function StudentDashboard() {
 
   if (!user) redirect("/login");
 
-  const { data: studentRow } = await supabase
-    .from("students")
-    .select(
-      `
-      current_hsk_level,
-      profile:profiles!inner(id, email, full_name, role),
-      classroom:classrooms(name),
-      teacher:teachers!students_teacher_id_fkey(
-        profile:profiles!teachers_user_id_fkey(full_name, email)
-      ),
-      student_assignments(
-        is_completed,
-        assignment:assignments!inner(chapter_id)
-      )
-    `
-    )
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: profile }, { data: studentProgress }] = await Promise.all([
+    supabase.from("profiles").select("id, email, full_name, role").eq("id", user.id).single(),
+    supabase
+      .from("students")
+      .select("current_hsk_level, teacher_id, classroom_id")
+      .eq("user_id", user.id)
+      .single(),
+  ]);
 
-  const profile = Array.isArray(studentRow?.profile) ? studentRow.profile[0] : studentRow?.profile;
   if (!profile || profile.role !== "student") {
     redirect(
       profile?.role === "teacher"
@@ -61,23 +50,31 @@ export default async function StudentDashboard() {
     );
   }
 
-  if (!studentRow) redirect("/login");
+  if (!studentProgress) redirect("/login");
 
-  const classroom = Array.isArray(studentRow.classroom) ? studentRow.classroom[0] : studentRow.classroom;
-  const teacherRow = Array.isArray(studentRow.teacher) ? studentRow.teacher[0] : studentRow.teacher;
-  const teacherProfile = teacherRow
-    ? Array.isArray(teacherRow.profile)
-      ? teacherRow.profile[0]
-      : teacherRow.profile
-    : null;
+  const [{ data: teacherProfile }, { data: classroomRow }, { data: progressRows }] =
+    await Promise.all([
+      studentProgress.teacher_id
+        ? supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", studentProgress.teacher_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      studentProgress.classroom_id
+        ? supabase
+            .from("classrooms")
+            .select("name")
+            .eq("id", studentProgress.classroom_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("student_assignments")
+        .select("is_completed, assignment:assignments(chapter_id)")
+        .eq("student_id", user.id),
+    ]);
 
-  const assignmentRows = Array.isArray(studentRow.student_assignments)
-    ? studentRow.student_assignments
-    : studentRow.student_assignments
-      ? [studentRow.student_assignments]
-      : [];
-
-  const chapterProgress = buildChapterProgress(assignmentRows, studentRow.current_hsk_level);
+  const chapterProgress = buildChapterProgress(progressRows ?? [], studentProgress.current_hsk_level);
 
   return (
     <StudentDashboardContent
@@ -85,14 +82,14 @@ export default async function StudentDashboard() {
         id: profile.id,
         name: profile.full_name ?? "Student",
         email: profile.email,
-        current_hsk_level: studentRow.current_hsk_level,
+        current_hsk_level: studentProgress.current_hsk_level,
         teacher: teacherProfile
           ? {
               name: teacherProfile.full_name ?? "Teacher",
               email: teacherProfile.email,
             }
           : null,
-        classroom: classroom ? { name: classroom.name } : null,
+        classroom: classroomRow ? { name: classroomRow.name } : null,
       }}
       chapterProgress={chapterProgress}
     />
