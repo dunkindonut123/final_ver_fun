@@ -3,6 +3,8 @@ import { requireAdminApi } from "@/lib/admin/require-admin";
 import { parseCsv } from "@/lib/lms/csv-parser";
 import { importQuestionRows, validateQuestionCsv } from "@/lib/lms/assignment-questions";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const auth = await requireAdminApi();
   if (!auth.ok) return auth.response;

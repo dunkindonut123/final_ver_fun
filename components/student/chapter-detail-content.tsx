@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +10,7 @@ import { ArrowLeft, CheckCircle2, ExternalLink, Lock, Play } from "lucide-react"
 
 type AssignmentStatus = "locked" | "not_started" | "in_progress" | "completed";
 
-interface AssignmentItem {
+export interface ChapterAssignmentItem {
   studentAssignmentId: string;
   assignmentId: string;
   title: string;
@@ -25,73 +23,18 @@ interface AssignmentItem {
 }
 
 interface ChapterDetailContentProps {
-  chapterId: string;
   chapterTitle: string;
   chapterDescription: string | null;
   hskLevel: number;
-  studentId: string;
+  assignments: ChapterAssignmentItem[];
 }
 
 export function ChapterDetailContent({
-  chapterId,
   chapterTitle,
   chapterDescription,
   hskLevel,
-  studentId,
+  assignments,
 }: ChapterDetailContentProps) {
-  const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("student_assignments")
-        .select(
-          "id, is_locked, is_completed, score, started_at, assignment:assignments(id, title, order_index, assignment_key, chapter_id)"
-        )
-        .eq("student_id", studentId);
-
-      if (!data) {
-        setLoading(false);
-        return;
-      }
-
-      const items = data
-        .map((row) => {
-          const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
-          if (!assignment || assignment.chapter_id !== chapterId) return null;
-
-          const status: AssignmentStatus = row.is_locked
-            ? "locked"
-            : row.is_completed
-              ? "completed"
-              : row.started_at
-                ? "in_progress"
-                : "not_started";
-
-          return {
-            studentAssignmentId: row.id,
-            assignmentId: assignment.id,
-            title: assignment.title,
-            orderIndex: assignment.order_index,
-            assignmentKey: assignment.assignment_key,
-            isLocked: row.is_locked,
-            isCompleted: row.is_completed,
-            score: row.score,
-            status,
-          } satisfies AssignmentItem;
-        })
-        .filter((item): item is AssignmentItem => item !== null)
-        .sort((a, b) => a.orderIndex - b.orderIndex);
-
-      setAssignments(items);
-      setLoading(false);
-    };
-
-    void load();
-  }, [chapterId, studentId]);
-
   return (
     <StudentShell>
       <Link
@@ -112,9 +55,7 @@ export function ChapterDetailContent({
 
       <ChapterTabs
         assignmentsContent={
-          loading ? (
-            <p className="text-muted-foreground">Loading assignments...</p>
-          ) : assignments.length === 0 ? (
+          assignments.length === 0 ? (
             <p className="text-center text-muted-foreground">No assignments for this chapter yet.</p>
           ) : (
             <div className="grid gap-4">

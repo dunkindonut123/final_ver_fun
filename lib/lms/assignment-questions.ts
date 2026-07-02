@@ -114,13 +114,21 @@ export async function getQuestionsForAssignment(
   chapterId: string,
   assignmentKey: AssignmentKey
 ): Promise<AssignmentQuestionRow[]> {
-  const assignmentId = await resolveAssignmentId(supabase, chapterId, assignmentKey);
-  if (!assignmentId) return [];
-
   const { data, error } = await supabase
     .from("assignment_questions")
-    .select("id, assignment_id, question_order, answer, pinyin_hint, meaning_hint")
-    .eq("assignment_id", assignmentId)
+    .select(
+      `
+      id,
+      assignment_id,
+      question_order,
+      answer,
+      pinyin_hint,
+      meaning_hint,
+      assignment:assignments!inner(chapter_id, assignment_key)
+    `
+    )
+    .eq("assignments.chapter_id", chapterId)
+    .eq("assignments.assignment_key", assignmentKey)
     .order("question_order", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -259,6 +267,8 @@ export function validateQuestionCsv(
   return { validRows, errors };
 }
 
+const IMPORT_INSERT_CHUNK_SIZE = 500;
+
 async function loadChapterIds(supabase: SupabaseClient): Promise<Set<string>> {
   const { data, error } = await supabase.from("hsk_chapters").select("id");
   if (error) throw new Error(error.message);
@@ -284,13 +294,32 @@ async function loadAssignmentMap(supabase: SupabaseClient): Promise<Map<string, 
   return map;
 }
 
+async function insertQuestionRowsInChunks(
+  supabase: SupabaseClient,
+  rows: {
+    assignment_id: string;
+    question_order: number;
+    answer: string;
+    pinyin_hint: string | null;
+    meaning_hint: string | null;
+  }[]
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += IMPORT_INSERT_CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + IMPORT_INSERT_CHUNK_SIZE);
+    const { error } = await supabase.from("assignment_questions").insert(chunk);
+    if (error) throw new Error(error.message);
+  }
+}
+
 export async function importQuestionRows(
   supabase: SupabaseClient,
   uploadedBy: string,
   rows: ParsedQuestionCsvRow[]
 ): Promise<ImportSummary> {
-  const chapterIds = await loadChapterIds(supabase);
-  const assignmentMap = await loadAssignmentMap(supabase);
+  const [chapterIds, assignmentMap] = await Promise.all([
+    loadChapterIds(supabase),
+    loadAssignmentMap(supabase),
+  ]);
   const errors: CsvValidationError[] = [];
 
   for (let i = 0; i < rows.length; i++) {
@@ -323,18 +352,30 @@ export async function importQuestionRows(
     grouped.set(key, group);
   }
 
-  let imported = 0;
+  const assignmentIds = [...grouped.keys()]
+    .map((scopeKey) => assignmentMap.get(scopeKey)?.id)
+    .filter((id): id is string => Boolean(id));
+
+  if (assignmentIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("assignment_questions")
+      .delete()
+      .in("assignment_id", assignmentIds);
+
+    if (deleteError) throw new Error(deleteError.message);
+  }
+
+  const allInserts: {
+    assignment_id: string;
+    question_order: number;
+    answer: string;
+    pinyin_hint: string | null;
+    meaning_hint: string | null;
+  }[] = [];
 
   for (const [scopeKey, groupRows] of grouped) {
     const assignment = assignmentMap.get(scopeKey);
     if (!assignment) continue;
-
-    const { error: deleteError } = await supabase
-      .from("assignment_questions")
-      .delete()
-      .eq("assignment_id", assignment.id);
-
-    if (deleteError) throw new Error(deleteError.message);
 
     const inserts = groupRows
       .slice()
@@ -347,11 +388,11 @@ export async function importQuestionRows(
         meaning_hint: row.meaning_hint ?? null,
       }));
 
-    const { error: insertError } = await supabase.from("assignment_questions").insert(inserts);
-    if (insertError) throw new Error(insertError.message);
-
-    imported += inserts.length;
+    allInserts.push(...inserts);
   }
+
+  await insertQuestionRowsInChunks(supabase, allInserts);
+  const imported = allInserts.length;
 
   await supabase.from("question_import_batches").insert({
     uploaded_by: uploadedBy,
