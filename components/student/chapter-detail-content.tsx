@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChapterTabs } from "@/components/student/chapter-tabs";
+import { AssignmentRetryButton } from "@/components/student/assignment-retry-button";
 import { ArrowLeft, CheckCircle2, ExternalLink, Lock, Play } from "lucide-react";
 
 type AssignmentStatus = "locked" | "not_started" | "in_progress" | "completed";
@@ -72,8 +73,14 @@ export function ChapterDetailContent({
                     <div>
                       <p className="text-sm text-muted-foreground">Assignment {assignment.orderIndex}</p>
                       <h2 className="text-lg font-semibold text-foreground">{assignment.title}</h2>
-                      {assignment.status === "completed" && assignment.score !== null ? (
-                        <p className="mt-1 text-sm text-emerald-600">Score: {assignment.score}%</p>
+                      {assignment.score !== null && assignment.status !== "locked" ? (
+                        <p
+                          className={`mt-1 text-sm ${
+                            assignment.status === "completed" ? "text-emerald-600" : "text-muted-foreground"
+                          }`}
+                        >
+                          {assignment.status === "completed" ? "Score" : "Last score"}: {assignment.score}%
+                        </p>
                       ) : assignment.status === "in_progress" ? (
                         <p className="mt-1 text-sm text-amber-600">In progress</p>
                       ) : null}
@@ -85,9 +92,14 @@ export function ChapterDetailContent({
                         Locked by teacher
                       </div>
                     ) : assignment.status === "completed" ? (
-                      <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Completed
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Completed
+                          </div>
+                          <AssignmentRetryButton studentAssignmentId={assignment.studentAssignmentId} />
+                        </div>
                       </div>
                     ) : (
                       <Button asChild className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">

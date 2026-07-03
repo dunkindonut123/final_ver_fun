@@ -101,7 +101,6 @@ export default async function StudentAssignmentPage({
       assignmentKey={assignment.assignment_key}
       assignmentTitle={assignment.title}
       isLocked={row.is_locked}
-      isCompleted={row.is_completed}
       mandarinQuestions={mandarinQuestions}
       assignmentBWords={assignmentBWords}
     />

@@ -1,6 +1,7 @@
 "use client"
 
-import { RotateCcw } from "lucide-react"
+import { RotateCcw, Home } from "lucide-react"
+import Link from "next/link"
 
 import type React from "react"
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
@@ -19,6 +20,14 @@ const VISIBLE_WORD_COUNT = WORDS_PER_ROW * 2
 
 interface TypingGameProps {
   initialWordPool: string[]
+  returnHref?: string
+  onFinished?: (metrics: {
+    wpm: number
+    accuracy: number
+    correctWords: number
+    incorrectWords: number
+    totalKeystrokes: number
+  }) => void
 }
 
 interface WordTileProps {
@@ -50,7 +59,7 @@ const WordTile = memo(function WordTile({ wordState, index }: WordTileProps) {
   )
 })
 
-export function TypingGame({ initialWordPool }: TypingGameProps) {
+export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGameProps) {
   const [words, setWords] = useState<WordState[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [input, setInput] = useState("")
@@ -63,6 +72,7 @@ export function TypingGame({ initialWordPool }: TypingGameProps) {
     correctKeystrokes: 0,
   })
   const inputRef = useRef<HTMLInputElement>(null)
+  const finishedNotifiedRef = useRef(false)
   const visibleWords = useMemo(() => words.slice(0, VISIBLE_WORD_COUNT), [words])
   const formattedTime = useMemo(() => {
     const mins = Math.floor(timeLeft / 60)
@@ -97,6 +107,7 @@ export function TypingGame({ initialWordPool }: TypingGameProps) {
       totalKeystrokes: 0,
       correctKeystrokes: 0,
     })
+    finishedNotifiedRef.current = false
   }, [initialWordPool])
 
   useEffect(() => {
@@ -117,6 +128,19 @@ export function TypingGame({ initialWordPool }: TypingGameProps) {
       return () => clearInterval(timer)
     }
   }, [gameState, timeLeft])
+
+  useEffect(() => {
+    if (gameState !== "finished" || !onFinished || finishedNotifiedRef.current) return
+
+    finishedNotifiedRef.current = true
+    onFinished({
+      wpm,
+      accuracy,
+      correctWords: stats.correctWords,
+      incorrectWords: stats.incorrectWords,
+      totalKeystrokes: stats.totalKeystrokes,
+    })
+  }, [accuracy, gameState, onFinished, stats.correctWords, stats.incorrectWords, stats.totalKeystrokes, wpm])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -224,7 +248,16 @@ export function TypingGame({ initialWordPool }: TypingGameProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-center pt-4">
+          <div className="flex items-center justify-center gap-3 pt-4">
+            {returnHref ? (
+              <Link
+                href={returnHref}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-foreground hover:border-primary hover:text-primary transition-colors"
+              >
+                <Home className="w-5 h-5" />
+                <span>Back to chapter</span>
+              </Link>
+            ) : null}
             <button
               onClick={initializeGame}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"

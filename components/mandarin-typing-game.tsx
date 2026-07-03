@@ -85,17 +85,12 @@ export function MandarinTypingGame({
     }
 
     const isCorrect = normalizeInput(inputValue) === currentQuestion.answer
-    const isLastQuestion = currentQuestionIndex + 1 === totalQuestions
 
     setLastAnswerCorrect(isCorrect)
     setAnswerSubmitted(true)
 
     if (isCorrect) {
       setScore((prev) => prev + 1)
-    }
-
-    if (isLastQuestion && saveState === "idle") {
-      void persistAssignmentCompletion()
     }
   }
 
@@ -298,7 +293,7 @@ export function MandarinTypingGame({
             className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
           >
             <Home className="h-4 w-4" />
-            Kembali ke Dashboard
+            Return to Dashboard
           </Link>
           <p className="text-sm text-muted-foreground font-medium">HSK {hskLevel} - {assignmentLevel}</p>
         </div>
@@ -369,7 +364,7 @@ export function MandarinTypingGame({
               }
             }}
             className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg text-center text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Ketik jawaban hanzi di sini"
+            placeholder="Enter Hanzi Here"
             autoFocus
             autoComplete="off"
             autoCorrect="off"
