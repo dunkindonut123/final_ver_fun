@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { MAX_HSK_LEVEL } from "@/lib/lms/hsk-levels";
 import type { AssignmentAttemptItem } from "@/lib/lms/assignment-attempts";
+import { formatAAssignmentScoreDisplay } from "@/lib/lms/assignment-score-display";
+import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
+import { getQuestionCountsByAssignmentIds } from "@/lib/lms/assignment-questions";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +30,7 @@ type AssignmentStatus = "not_started" | "in_progress" | "completed";
 
 interface AssignmentToggle {
   studentAssignmentId: string;
+  assignmentId: string;
   title: string;
   assignmentKey: string;
   orderIndex: number;
@@ -36,6 +40,9 @@ interface AssignmentToggle {
   isLocked: boolean;
   isCompleted: boolean;
   score: number | null;
+  correctCount: number | null;
+  totalQuestions: number | null;
+  questionPoolCount: number | null;
   status: AssignmentStatus;
 }
 
@@ -101,14 +108,58 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
 
   const loadAssignments = async () => {
     const supabase = createClient();
-    const { data, error } = await supabase
+    let data:
+      | {
+          id: string;
+          is_locked: boolean;
+          is_completed: boolean;
+          score: number | null;
+          correct_count?: number | null;
+          total_questions?: number | null;
+          started_at: string | null;
+          assignment:
+            | {
+                id: string;
+                title: string;
+                order_index: number;
+                chapter_id: string;
+                assignment_key: string;
+              }
+            | {
+                id: string;
+                title: string;
+                order_index: number;
+                chapter_id: string;
+                assignment_key: string;
+              }[]
+            | null;
+        }[]
+      | null = null;
+
+    const primary = await supabase
       .from("student_assignments")
       .select(
-        "id, is_locked, is_completed, score, started_at, assignment:assignments(title, order_index, chapter_id, assignment_key)"
+        "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments(id, title, order_index, chapter_id, assignment_key)"
       )
       .eq("student_id", student.id);
 
-    if (error || !data) {
+    if (primary.error?.message?.includes("correct_count")) {
+      const fallback = await supabase
+        .from("student_assignments")
+        .select(
+          "id, is_locked, is_completed, score, started_at, assignment:assignments(id, title, order_index, chapter_id, assignment_key)"
+        )
+        .eq("student_id", student.id);
+      data = fallback.data;
+    } else if (primary.error || !primary.data) {
+      setAssignments([]);
+      setLoading(false);
+      return;
+    } else {
+      data = primary.data;
+    }
+
+    if (!data) {
       setAssignments([]);
       setLoading(false);
       return;
@@ -162,6 +213,7 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
 
         return {
           studentAssignmentId: row.id,
+          assignmentId: assignment.id,
           title: assignment.title,
           assignmentKey: assignment.assignment_key ?? "",
           orderIndex: assignment.order_index,
@@ -171,13 +223,27 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
           isLocked: row.is_locked,
           isCompleted: row.is_completed,
           score: row.score,
+          correctCount: row.correct_count ?? null,
+          totalQuestions: row.total_questions ?? null,
+          questionPoolCount: null as number | null,
           status,
-        } satisfies AssignmentToggle;
+        };
       })
       .filter((item): item is AssignmentToggle => item !== null)
       .sort((a, b) => a.chapterNumber - b.chapterNumber || a.orderIndex - b.orderIndex);
 
-    setAssignments(items);
+    const aAssignmentIds = items
+      .filter((item) => isAssignmentALevel(item.assignmentKey))
+      .map((item) => item.assignmentId);
+    const questionCounts = await getQuestionCountsByAssignmentIds(supabase, aAssignmentIds);
+    const enrichedItems = items.map((item) => ({
+      ...item,
+      questionPoolCount: isAssignmentALevel(item.assignmentKey)
+        ? questionCounts.get(item.assignmentId) ?? null
+        : null,
+    }));
+
+    setAssignments(enrichedItems);
     setLoading(false);
   };
 
@@ -305,11 +371,23 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
     });
 
   const statusBadge = (item: AssignmentToggle) => {
+    const scoreLabel =
+      item.score !== null
+        ? isAssignmentALevel(item.assignmentKey)
+          ? formatAAssignmentScoreDisplay(
+              item.score,
+              item.correctCount,
+              item.totalQuestions,
+              item.questionPoolCount
+            )
+          : `${item.score}%`
+        : null;
+
     if (item.status === "completed") {
       return (
         <span className="inline-flex items-center gap-1 text-sm text-emerald-600">
           <CheckCircle2 className="h-4 w-4" />
-          Completed{item.score !== null ? ` (${item.score}%)` : ""}
+          Completed{scoreLabel ? ` (${scoreLabel})` : ""}
         </span>
       );
     }
@@ -482,7 +560,16 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
                                         Attempt {attempts.length - index}
                                       </span>
                                       <div className="text-right">
-                                        <p className="font-semibold text-foreground">{attempt.score}%</p>
+                                        <p className="font-semibold text-foreground">
+                                          {isAssignmentALevel(assignment.assignmentKey)
+                                            ? formatAAssignmentScoreDisplay(
+                                                attempt.score,
+                                                attempt.correctCount,
+                                                attempt.totalQuestions,
+                                                assignment.questionPoolCount
+                                              ) ?? `${attempt.score}%`
+                                            : `${attempt.score}%`}
+                                        </p>
                                         <p className="text-xs text-muted-foreground">
                                           {formatAttemptDate(attempt.completedAt)}
                                         </p>

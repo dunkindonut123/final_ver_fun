@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { recordStudentAssignmentAttempt } from "@/lib/lms/assignment-attempts";
+import {
+  recordStudentAssignmentAttempt,
+  type AssignmentCompletionInput,
+} from "@/lib/lms/assignment-attempts";
 
 export interface AssignmentRow {
   id: string;
@@ -16,6 +19,8 @@ export interface StudentAssignmentRow {
   is_locked: boolean;
   is_completed: boolean;
   score: number | null;
+  correct_count: number | null;
+  total_questions: number | null;
   completed_at: string | null;
   assignment?: AssignmentRow;
 }
@@ -38,7 +43,7 @@ export async function seedStudentAssignments(
 export async function completeStudentAssignment(
   supabase: SupabaseClient,
   studentAssignmentId: string,
-  score: number
+  input: AssignmentCompletionInput
 ) {
   const { data: existing, error: fetchError } = await supabase
     .from("student_assignments")
@@ -50,7 +55,11 @@ export async function completeStudentAssignment(
     throw new Error(fetchError.message);
   }
 
-  const normalizedScore = Math.min(100, Math.max(0, Math.round(score)));
+  const normalizedScore = Math.min(100, Math.max(0, Math.round(input.score)));
+  const correctCount =
+    typeof input.correctCount === "number" ? Math.max(0, Math.round(input.correctCount)) : null;
+  const totalQuestions =
+    typeof input.totalQuestions === "number" ? Math.max(1, Math.round(input.totalQuestions)) : null;
   const completedAt = new Date().toISOString();
 
   const { error } = await supabase
@@ -58,6 +67,8 @@ export async function completeStudentAssignment(
     .update({
       is_completed: true,
       score: normalizedScore,
+      correct_count: correctCount,
+      total_questions: totalQuestions,
       completed_at: completedAt,
     })
     .eq("id", studentAssignmentId);
@@ -69,7 +80,11 @@ export async function completeStudentAssignment(
   await recordStudentAssignmentAttempt(
     supabase,
     studentAssignmentId,
-    normalizedScore,
+    {
+      score: normalizedScore,
+      correctCount: correctCount ?? undefined,
+      totalQuestions: totalQuestions ?? undefined,
+    },
     existing?.started_at ?? null
   );
 }

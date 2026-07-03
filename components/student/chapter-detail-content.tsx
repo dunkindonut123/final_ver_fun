@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChapterTabs } from "@/components/student/chapter-tabs";
 import { AssignmentRetryButton } from "@/components/student/assignment-retry-button";
+import { formatAAssignmentScoreDisplay } from "@/lib/lms/assignment-score-display";
+import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
 import { ArrowLeft, CheckCircle2, ExternalLink, Lock, Play } from "lucide-react";
 
 type AssignmentStatus = "locked" | "not_started" | "in_progress" | "completed";
@@ -20,6 +22,9 @@ export interface ChapterAssignmentItem {
   isLocked: boolean;
   isCompleted: boolean;
   score: number | null;
+  correctCount: number | null;
+  totalQuestions: number | null;
+  questionPoolCount: number | null;
   status: AssignmentStatus;
 }
 
@@ -60,7 +65,20 @@ export function ChapterDetailContent({
             <p className="text-center text-muted-foreground">No assignments for this chapter yet.</p>
           ) : (
             <div className="grid gap-4">
-              {assignments.map((assignment) => (
+              {assignments.map((assignment) => {
+                const scoreDisplay =
+                  assignment.score !== null && assignment.status !== "locked"
+                    ? isAssignmentALevel(assignment.assignmentKey)
+                      ? formatAAssignmentScoreDisplay(
+                          assignment.score,
+                          assignment.correctCount,
+                          assignment.totalQuestions,
+                          assignment.questionPoolCount
+                        )
+                      : `${assignment.score}%`
+                    : null;
+
+                return (
                 <Card
                   key={assignment.studentAssignmentId}
                   className={`rounded-2xl border ${
@@ -73,13 +91,13 @@ export function ChapterDetailContent({
                     <div>
                       <p className="text-sm text-muted-foreground">Assignment {assignment.orderIndex}</p>
                       <h2 className="text-lg font-semibold text-foreground">{assignment.title}</h2>
-                      {assignment.score !== null && assignment.status !== "locked" ? (
+                      {scoreDisplay ? (
                         <p
                           className={`mt-1 text-sm ${
                             assignment.status === "completed" ? "text-emerald-600" : "text-muted-foreground"
                           }`}
                         >
-                          {assignment.status === "completed" ? "Score" : "Last score"}: {assignment.score}%
+                          {assignment.status === "completed" ? "Score" : "Last score"}: {scoreDisplay}
                         </p>
                       ) : assignment.status === "in_progress" ? (
                         <p className="mt-1 text-sm text-amber-600">In progress</p>
@@ -111,7 +129,8 @@ export function ChapterDetailContent({
                     )}
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )
         }

@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { completeStudentAssignment } from "@/lib/lms/student-assignments";
 
+function parseOptionalCount(value: unknown): number | undefined {
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return undefined;
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -10,9 +21,21 @@ export async function PATCH(
     const { id: studentAssignmentId } = await params;
     const body = await request.json();
     const score = typeof body.score === "number" ? body.score : Number(body.score);
+    const correctCount = parseOptionalCount(body.correctCount);
+    const totalQuestions = parseOptionalCount(body.totalQuestions);
 
     if (Number.isNaN(score)) {
       return NextResponse.json({ error: "Score is required." }, { status: 400 });
+    }
+
+    if (
+      (correctCount !== undefined && correctCount < 0) ||
+      (totalQuestions !== undefined && totalQuestions < 1) ||
+      (correctCount !== undefined &&
+        totalQuestions !== undefined &&
+        correctCount > totalQuestions)
+    ) {
+      return NextResponse.json({ error: "Invalid correct/total metrics." }, { status: 400 });
     }
 
     const supabase = await createClient();
@@ -42,7 +65,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Assignment is locked." }, { status: 403 });
     }
 
-    await completeStudentAssignment(supabase, studentAssignmentId, score);
+    await completeStudentAssignment(supabase, studentAssignmentId, {
+      score,
+      correctCount,
+      totalQuestions,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

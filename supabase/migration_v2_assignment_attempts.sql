@@ -5,6 +5,8 @@ create table if not exists public.student_assignment_attempts (
   id uuid primary key default gen_random_uuid(),
   student_assignment_id uuid not null references public.student_assignments(id) on delete cascade,
   score int not null check (score between 0 and 100),
+  correct_count int check (correct_count is null or correct_count >= 0),
+  total_questions int check (total_questions is null or total_questions > 0),
   started_at timestamptz,
   completed_at timestamptz not null default now(),
   created_at timestamptz not null default now()

@@ -87,6 +87,27 @@ export function toWordPool(rows: AssignmentQuestionRow[]): string[] {
     .map((row) => row.answer);
 }
 
+export async function getQuestionCountsByAssignmentIds(
+  supabase: SupabaseClient,
+  assignmentIds: string[]
+): Promise<Map<string, number>> {
+  const uniqueIds = [...new Set(assignmentIds)];
+  if (uniqueIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("assignment_questions")
+    .select("assignment_id")
+    .in("assignment_id", uniqueIds);
+
+  if (error) throw new Error(error.message);
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    counts.set(row.assignment_id, (counts.get(row.assignment_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function resolveAssignmentId(
   supabase: SupabaseClient,
   chapterId: string,

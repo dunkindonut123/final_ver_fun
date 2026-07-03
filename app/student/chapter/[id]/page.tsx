@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getQuestionCountsByAssignmentIds } from "@/lib/lms/assignment-questions";
+import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
 import {
   ChapterDetailContent,
   type ChapterAssignmentItem,
@@ -13,6 +15,8 @@ function mapAssignmentRows(
     is_locked: boolean;
     is_completed: boolean;
     score: number | null;
+    correct_count?: number | null;
+    total_questions?: number | null;
     started_at: string | null;
     assignment: {
       id: string;
@@ -51,8 +55,11 @@ function mapAssignmentRows(
         isLocked: row.is_locked,
         isCompleted: row.is_completed,
         score: row.score,
+        correctCount: row.correct_count ?? null,
+        totalQuestions: row.total_questions ?? null,
+        questionPoolCount: null as number | null,
         status,
-      } satisfies ChapterAssignmentItem;
+      };
     })
     .filter((item): item is ChapterAssignmentItem => item !== null)
     .sort((a, b) => a.orderIndex - b.orderIndex);
@@ -71,7 +78,7 @@ export default async function StudentChapterPage({
 
   if (!user) redirect("/login");
 
-  const [{ data: profile }, { data: chapter }, { data: student }, { data: assignmentRows }] =
+  const [{ data: profile }, { data: chapter }, { data: student }, assignmentQuery] =
     await Promise.all([
       supabase.from("profiles").select("role").eq("id", user.id).single(),
       supabase
@@ -83,11 +90,23 @@ export default async function StudentChapterPage({
       supabase
         .from("student_assignments")
         .select(
-          "id, is_locked, is_completed, score, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
+          "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
         )
         .eq("student_id", user.id)
         .eq("assignments.chapter_id", chapterId),
     ]);
+
+  let assignmentRows: Parameters<typeof mapAssignmentRows>[0] | null = assignmentQuery.data;
+  if (assignmentQuery.error?.message?.includes("correct_count")) {
+    const fallback = await supabase
+      .from("student_assignments")
+      .select(
+        "id, is_locked, is_completed, score, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
+      )
+      .eq("student_id", user.id)
+      .eq("assignments.chapter_id", chapterId);
+    assignmentRows = fallback.data;
+  }
 
   if (!profile || profile.role !== "student") redirect("/login");
   if (!chapter) redirect("/student/dashboard");
@@ -95,7 +114,17 @@ export default async function StudentChapterPage({
     redirect("/student/dashboard");
   }
 
-  const assignments = mapAssignmentRows(assignmentRows ?? []);
+  const baseAssignments = mapAssignmentRows(assignmentRows ?? []);
+  const aAssignmentIds = baseAssignments
+    .filter((assignment) => isAssignmentALevel(assignment.assignmentKey))
+    .map((assignment) => assignment.assignmentId);
+  const questionCounts = await getQuestionCountsByAssignmentIds(supabase, aAssignmentIds);
+  const assignments = baseAssignments.map((assignment) => ({
+    ...assignment,
+    questionPoolCount: isAssignmentALevel(assignment.assignmentKey)
+      ? questionCounts.get(assignment.assignmentId) ?? null
+      : null,
+  }));
 
   return (
     <ChapterDetailContent
