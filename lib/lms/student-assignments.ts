@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { recordStudentAssignmentAttempt } from "@/lib/lms/assignment-attempts";
 
 export interface AssignmentRow {
   id: string;
@@ -39,18 +40,38 @@ export async function completeStudentAssignment(
   studentAssignmentId: string,
   score: number
 ) {
+  const { data: existing, error: fetchError } = await supabase
+    .from("student_assignments")
+    .select("started_at")
+    .eq("id", studentAssignmentId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(fetchError.message);
+  }
+
+  const normalizedScore = Math.min(100, Math.max(0, Math.round(score)));
+  const completedAt = new Date().toISOString();
+
   const { error } = await supabase
     .from("student_assignments")
     .update({
       is_completed: true,
-      score: Math.min(100, Math.max(0, Math.round(score))),
-      completed_at: new Date().toISOString(),
+      score: normalizedScore,
+      completed_at: completedAt,
     })
     .eq("id", studentAssignmentId);
 
   if (error) {
     throw new Error(error.message);
   }
+
+  await recordStudentAssignmentAttempt(
+    supabase,
+    studentAssignmentId,
+    normalizedScore,
+    existing?.started_at ?? null
+  );
 }
 
 export async function retryStudentAssignment(

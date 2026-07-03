@@ -224,14 +224,6 @@ export function MandarinTypingGame({
     }
   }, [assignmentLevel, chapterId, score, studentAssignmentId, totalQuestions])
 
-  useEffect(() => {
-    if (gameState !== "finished" || saveState !== "idle") {
-      return
-    }
-
-    void persistAssignmentCompletion()
-  }, [gameState, persistAssignmentCompletion, saveState])
-
   if (totalQuestions === 0) {
     return <QuestionsUnavailable returnHref={returnHref} />
   }

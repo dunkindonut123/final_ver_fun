@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentGameRouter } from "@/components/student/assignment-game-router";
 import {
+  getCombinedAQuestionsForChapter,
   toMandarinTypingQuestions,
   toWordPool,
   type AssignmentKey,
@@ -90,7 +91,8 @@ export default async function StudentAssignmentPage({
   if (isAssignmentALevel(assignmentKey)) {
     mandarinQuestions = dbRows.length > 0 ? toMandarinTypingQuestions(dbRows) : [];
   } else if (assignmentKey === "B") {
-    assignmentBWords = dbRows.length > 0 ? toWordPool(dbRows) : [];
+    const combinedRows = await getCombinedAQuestionsForChapter(supabase, assignment.chapter_id);
+    assignmentBWords = combinedRows.length > 0 ? toWordPool(combinedRows) : [];
   }
 
   return (

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { MAX_HSK_LEVEL } from "@/lib/lms/hsk-levels";
+import type { AssignmentAttemptItem } from "@/lib/lms/assignment-attempts";
+import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TeacherShell } from "@/components/layout/teacher-shell";
@@ -19,13 +21,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronRight, CheckCircle2, Clock, Circle, TrendingUp } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, Clock, Circle, TrendingUp } from "lucide-react";
 
 type AssignmentStatus = "not_started" | "in_progress" | "completed";
 
 interface AssignmentToggle {
   studentAssignmentId: string;
   title: string;
+  assignmentKey: string;
   orderIndex: number;
   chapterId: string;
   chapterNumber: number;
@@ -62,6 +65,11 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
   const [note, setNote] = useState("");
   const [flagError, setFlagError] = useState<string | null>(null);
   const [flagSubmitting, setFlagSubmitting] = useState(false);
+  const [expandedAssignmentId, setExpandedAssignmentId] = useState<string | null>(null);
+  const [attemptsByAssignment, setAttemptsByAssignment] = useState<
+    Record<string, AssignmentAttemptItem[]>
+  >({});
+  const [loadingAttemptsId, setLoadingAttemptsId] = useState<string | null>(null);
 
   const grouped = useMemo(() => {
     const map = new Map<
@@ -96,7 +104,7 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
     const { data, error } = await supabase
       .from("student_assignments")
       .select(
-        "id, is_locked, is_completed, score, started_at, assignment:assignments(title, order_index, chapter_id)"
+        "id, is_locked, is_completed, score, started_at, assignment:assignments(title, order_index, chapter_id, assignment_key)"
       )
       .eq("student_id", student.id);
 
@@ -155,6 +163,7 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
         return {
           studentAssignmentId: row.id,
           title: assignment.title,
+          assignmentKey: assignment.assignment_key ?? "",
           orderIndex: assignment.order_index,
           chapterId: assignment.chapter_id,
           chapterNumber,
@@ -170,6 +179,39 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
 
     setAssignments(items);
     setLoading(false);
+  };
+
+  const loadAssignmentAttempts = async (studentAssignmentId: string) => {
+    setLoadingAttemptsId(studentAssignmentId);
+    try {
+      const response = await fetch(
+        `/api/teacher/assignments/${studentAssignmentId}/attempt-history`
+      );
+      if (!response.ok) {
+        setAttemptsByAssignment((current) => ({ ...current, [studentAssignmentId]: [] }));
+        return;
+      }
+
+      const payload = await response.json();
+      setAttemptsByAssignment((current) => ({
+        ...current,
+        [studentAssignmentId]: payload.attempts ?? [],
+      }));
+    } finally {
+      setLoadingAttemptsId(null);
+    }
+  };
+
+  const toggleAssignmentAttempts = (studentAssignmentId: string) => {
+    if (expandedAssignmentId === studentAssignmentId) {
+      setExpandedAssignmentId(null);
+      return;
+    }
+
+    setExpandedAssignmentId(studentAssignmentId);
+    if (!attemptsByAssignment[studentAssignmentId]) {
+      void loadAssignmentAttempts(studentAssignmentId);
+    }
   };
 
   const loadLatestFlag = async () => {
@@ -252,6 +294,15 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
   const isMaxLevel = student.hskLevel >= MAX_HSK_LEVEL;
   const hasPending = latestFlag?.status === "pending";
   const targetLevel = Math.min(MAX_HSK_LEVEL, student.hskLevel + 1);
+
+  const formatAttemptDate = (value: string) =>
+    new Date(value).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
 
   const statusBadge = (item: AssignmentToggle) => {
     if (item.status === "completed") {
@@ -364,34 +415,87 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
                     </div>
                   </div>
                   <div className="divide-y">
-                    {chapterAssignments.map((assignment) => (
-                      <div
-                        key={assignment.studentAssignmentId}
-                        className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
-                      >
-                        <div>
-                          <p className="font-medium text-foreground">{assignment.title}</p>
-                          <div className="mt-1">{statusBadge(assignment)}</div>
+                    {chapterAssignments.map((assignment) => {
+                      const isExpanded = expandedAssignmentId === assignment.studentAssignmentId;
+                      const attempts = attemptsByAssignment[assignment.studentAssignmentId] ?? [];
+                      const isLoadingAttempts =
+                        loadingAttemptsId === assignment.studentAssignmentId;
+
+                      return (
+                        <div key={assignment.studentAssignmentId} className="px-5 py-4">
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <button
+                              type="button"
+                              onClick={() => toggleAssignmentAttempts(assignment.studentAssignmentId)}
+                              className="flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left hover:bg-muted/40 -mx-2 px-2 py-1"
+                              aria-expanded={isExpanded}
+                            >
+                              <ChevronDown
+                                className={cn(
+                                  "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                                  isExpanded && "rotate-180"
+                                )}
+                              />
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground">{assignment.title}</p>
+                                <div className="mt-1">{statusBadge(assignment)}</div>
+                              </div>
+                            </button>
+                            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2">
+                              <Label
+                                htmlFor={`assignment-lock-${assignment.studentAssignmentId}`}
+                                className="text-sm text-muted-foreground"
+                              >
+                                {assignment.isLocked ? "Locked" : "Unlocked"}
+                              </Label>
+                              <Switch
+                                id={`assignment-lock-${assignment.studentAssignmentId}`}
+                                checked={!assignment.isLocked}
+                                disabled={
+                                  updatingId === assignment.studentAssignmentId || chapterUpdating
+                                }
+                                onCheckedChange={() => void toggleLock(assignment.studentAssignmentId)}
+                                aria-label={assignment.isLocked ? "Unlock assignment" : "Lock assignment"}
+                              />
+                            </div>
+                          </div>
+
+                          {isExpanded ? (
+                            <div className="mt-3 ml-6 rounded-xl border border-border bg-muted/30 p-3">
+                              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Attempt history (latest 5)
+                              </p>
+                              {isLoadingAttempts ? (
+                                <p className="text-sm text-muted-foreground">Loading attempts...</p>
+                              ) : attempts.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                  No completed attempts for this assignment yet.
+                                </p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {attempts.map((attempt, index) => (
+                                    <div
+                                      key={attempt.id}
+                                      className="flex items-center justify-between gap-3 rounded-lg bg-background/80 px-3 py-2 text-sm"
+                                    >
+                                      <span className="text-muted-foreground">
+                                        Attempt {attempts.length - index}
+                                      </span>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-foreground">{attempt.score}%</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {formatAttemptDate(attempt.completedAt)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
-                        <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2">
-                          <Label
-                            htmlFor={`assignment-lock-${assignment.studentAssignmentId}`}
-                            className="text-sm text-muted-foreground"
-                          >
-                            {assignment.isLocked ? "Locked" : "Unlocked"}
-                          </Label>
-                          <Switch
-                            id={`assignment-lock-${assignment.studentAssignmentId}`}
-                            checked={!assignment.isLocked}
-                            disabled={
-                              updatingId === assignment.studentAssignmentId || chapterUpdating
-                            }
-                            onCheckedChange={() => void toggleLock(assignment.studentAssignmentId)}
-                            aria-label={assignment.isLocked ? "Unlock assignment" : "Lock assignment"}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
