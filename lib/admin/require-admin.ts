@@ -35,6 +35,10 @@ export async function requireAdminApi(): Promise<
 }
 
 export async function requireAdminPage() {
+  await getAdminPageContext();
+}
+
+export async function getAdminPageContext(): Promise<AdminContext> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -49,4 +53,6 @@ export async function requireAdminPage() {
     .single();
 
   if (!profile || profile.role !== "admin") redirect("/admin/login");
+
+  return { userId: user.id, db: createAdminClient() };
 }

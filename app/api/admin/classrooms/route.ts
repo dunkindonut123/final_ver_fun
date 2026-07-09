@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin/require-admin";
+import { fetchAdminClassrooms } from "@/lib/admin/queries/classrooms";
 import { isValidHskLevel, hskLevelRangeLabel } from "@/lib/lms/hsk-levels";
 import { normalizeClassCode } from "@/lib/lms/classroom";
 
@@ -7,48 +8,13 @@ export async function GET() {
   const auth = await requireAdminApi();
   if (!auth.ok) return auth.response;
 
-  const { data: classrooms, error } = await auth.ctx.db
-    .from("classrooms")
-    .select("id, name, class_code, hsk_level, teacher_id, created_at")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const classrooms = await fetchAdminClassrooms(auth.ctx.db);
+    return NextResponse.json({ classrooms });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const teacherIds = [...new Set((classrooms ?? []).map((c) => c.teacher_id))];
-
-  const { data: teachers } =
-    teacherIds.length > 0
-      ? await auth.ctx.db.from("profiles").select("id, full_name").in("id", teacherIds)
-      : { data: [] as { id: string; full_name: string | null }[] };
-
-  const teacherMap = new Map((teachers ?? []).map((t) => [t.id, t]));
-
-  const classroomIds = (classrooms ?? []).map((c) => c.id);
-  const { data: studentCounts } =
-    classroomIds.length > 0
-      ? await auth.ctx.db.from("students").select("classroom_id").in("classroom_id", classroomIds)
-      : { data: [] as { classroom_id: string | null }[] };
-
-  const countMap = new Map<string, number>();
-  (studentCounts ?? []).forEach((row) => {
-    if (!row.classroom_id) return;
-    countMap.set(row.classroom_id, (countMap.get(row.classroom_id) ?? 0) + 1);
-  });
-
-  const result = (classrooms ?? []).map((classroom) => ({
-    id: classroom.id,
-    name: classroom.name,
-    classCode: classroom.class_code,
-    hskLevel: classroom.hsk_level,
-    teacherId: classroom.teacher_id,
-    teacherName: teacherMap.get(classroom.teacher_id)?.full_name ?? "Teacher",
-    studentCount: countMap.get(classroom.id) ?? 0,
-    createdAt: classroom.created_at,
-  }));
-
-  return NextResponse.json({ classrooms: result });
 }
 
 export async function POST(request: Request) {

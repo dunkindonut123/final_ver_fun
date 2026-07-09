@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminPageHeader } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -100,10 +100,11 @@ export function AdminQuestionsContent() {
   const canImport = file && validationErrors.length === 0 && preview.length > 0;
 
   return (
-    <AdminShell
+    <>
+      <AdminPageHeader
       title="Assignment Questions"
       description="Upload CSV files to manage per-chapter assignment question content."
-    >
+    />
       <div className="mb-6 flex flex-wrap gap-3">
         <Button
           type="button"
@@ -197,6 +198,6 @@ export function AdminQuestionsContent() {
           </Button>
         </CardContent>
       </Card>
-    </AdminShell>
+    </>
   );
 }

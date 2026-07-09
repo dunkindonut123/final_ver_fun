@@ -1,8 +1,8 @@
-import { PortalLoadingShell, PulseBlock } from "@/components/layout/portal-loading-shell";
+import { PulseBlock } from "@/components/layout/portal-loading-shell";
 
 export default function TeacherStudentLoading() {
   return (
-    <PortalLoadingShell portalLabel="Teacher Portal">
+    <>
       <PulseBlock className="mb-6 h-4 w-48" />
 
       <div className="mb-6 rounded-2xl border border-white/20 bg-background/75 p-6 shadow-lg shadow-foreground/5">
@@ -31,7 +31,10 @@ export default function TeacherStudentLoading() {
             </div>
             <div className="divide-y">
               {Array.from({ length: 2 }).map((__, rowIndex) => (
-                <div key={rowIndex} className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+                <div
+                  key={rowIndex}
+                  className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+                >
                   <div className="space-y-2">
                     <PulseBlock className="h-4 w-32" />
                     <PulseBlock className="h-3 w-24" />
@@ -43,6 +46,6 @@ export default function TeacherStudentLoading() {
           </div>
         ))}
       </div>
-    </PortalLoadingShell>
+    </>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { StudentShell } from "@/components/layout/student-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +49,7 @@ export function ChapterDetailContent({
   material,
 }: ChapterDetailContentProps) {
   return (
-    <StudentShell>
+    <>
       <Link
         href="/student/dashboard"
         className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground/70 hover:bg-foreground/10"
@@ -155,6 +154,6 @@ export function ChapterDetailContent({
           )
         }
       />
-    </StudentShell>
+    </>
   );
 }

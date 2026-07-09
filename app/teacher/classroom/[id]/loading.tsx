@@ -1,8 +1,8 @@
-import { PortalLoadingShell, PulseBlock } from "@/components/layout/portal-loading-shell";
+import { PulseBlock } from "@/components/layout/portal-loading-shell";
 
 export default function TeacherClassroomLoading() {
   return (
-    <PortalLoadingShell portalLabel="Teacher Portal">
+    <>
       <PulseBlock className="mb-6 h-4 w-48" />
 
       <div className="mb-8 space-y-3">
@@ -23,7 +23,10 @@ export default function TeacherClassroomLoading() {
         </div>
         <div className="divide-y">
           {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="grid grid-cols-1 gap-3 px-5 py-4 md:grid-cols-12 md:items-center md:gap-4">
+            <div
+              key={index}
+              className="grid grid-cols-1 gap-3 px-5 py-4 md:grid-cols-12 md:items-center md:gap-4"
+            >
               <PulseBlock className="h-5 w-36 md:col-span-4" />
               <PulseBlock className="hidden h-4 w-10 md:col-span-2 md:mx-auto md:block" />
               <PulseBlock className="hidden h-4 w-10 md:col-span-2 md:mx-auto md:block" />
@@ -33,6 +36,6 @@ export default function TeacherClassroomLoading() {
           ))}
         </div>
       </div>
-    </PortalLoadingShell>
+    </>
   );
 }

@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MAX_HSK_LEVEL } from "@/lib/lms/hsk-levels";
 import type { AssignmentAttemptItem } from "@/lib/lms/assignment-attempts";
 import { formatAAssignmentScoreDisplay } from "@/lib/lms/assignment-score-display";
 import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
-import { getQuestionCountsByAssignmentIds } from "@/lib/lms/assignment-questions";
+import type {
+  AssignmentToggle,
+  PromotionFlag,
+} from "@/lib/teacher/queries/student-detail";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { TeacherShell } from "@/components/layout/teacher-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,32 +28,6 @@ import {
 } from "@/components/ui/dialog";
 import { ChevronDown, ChevronRight, CheckCircle2, Clock, Circle, TrendingUp } from "lucide-react";
 
-type AssignmentStatus = "not_started" | "in_progress" | "completed";
-
-interface AssignmentToggle {
-  studentAssignmentId: string;
-  assignmentId: string;
-  title: string;
-  assignmentKey: string;
-  orderIndex: number;
-  chapterId: string;
-  chapterNumber: number;
-  chapterTitle: string;
-  isLocked: boolean;
-  isCompleted: boolean;
-  score: number | null;
-  correctCount: number | null;
-  totalQuestions: number | null;
-  questionPoolCount: number | null;
-  status: AssignmentStatus;
-}
-
-interface PromotionFlag {
-  status: "pending" | "approved" | "rejected";
-  targetLevel: number;
-  note: string | null;
-}
-
 interface StudentDetailContentProps {
   student: {
     id: string;
@@ -60,14 +36,20 @@ interface StudentDetailContentProps {
     hskLevel: number;
     classroomName: string | null;
   };
+  initialAssignments: AssignmentToggle[];
+  initialLatestFlag: PromotionFlag | null;
 }
 
-export function StudentDetailContent({ student }: StudentDetailContentProps) {
-  const [assignments, setAssignments] = useState<AssignmentToggle[]>([]);
-  const [loading, setLoading] = useState(true);
+export function StudentDetailContent({
+  student,
+  initialAssignments,
+  initialLatestFlag,
+}: StudentDetailContentProps) {
+  const router = useRouter();
+  const [assignments, setAssignments] = useState(initialAssignments);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [updatingChapterId, setUpdatingChapterId] = useState<string | null>(null);
-  const [latestFlag, setLatestFlag] = useState<PromotionFlag | null>(null);
+  const [latestFlag, setLatestFlag] = useState(initialLatestFlag);
   const [flagOpen, setFlagOpen] = useState(false);
   const [note, setNote] = useState("");
   const [flagError, setFlagError] = useState<string | null>(null);
@@ -77,6 +59,11 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
     Record<string, AssignmentAttemptItem[]>
   >({});
   const [loadingAttemptsId, setLoadingAttemptsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAssignments(initialAssignments);
+    setLatestFlag(initialLatestFlag);
+  }, [initialAssignments, initialLatestFlag]);
 
   const grouped = useMemo(() => {
     const map = new Map<
@@ -105,147 +92,6 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
         chapterAssignments: group.assignments.sort((a, b) => a.orderIndex - b.orderIndex),
       }));
   }, [assignments]);
-
-  const loadAssignments = async () => {
-    const supabase = createClient();
-    let data:
-      | {
-          id: string;
-          is_locked: boolean;
-          is_completed: boolean;
-          score: number | null;
-          correct_count?: number | null;
-          total_questions?: number | null;
-          started_at: string | null;
-          assignment:
-            | {
-                id: string;
-                title: string;
-                order_index: number;
-                chapter_id: string;
-                assignment_key: string;
-              }
-            | {
-                id: string;
-                title: string;
-                order_index: number;
-                chapter_id: string;
-                assignment_key: string;
-              }[]
-            | null;
-        }[]
-      | null = null;
-
-    const primary = await supabase
-      .from("student_assignments")
-      .select(
-        "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments(id, title, order_index, chapter_id, assignment_key)"
-      )
-      .eq("student_id", student.id);
-
-    if (primary.error?.message?.includes("correct_count")) {
-      const fallback = await supabase
-        .from("student_assignments")
-        .select(
-          "id, is_locked, is_completed, score, started_at, assignment:assignments(id, title, order_index, chapter_id, assignment_key)"
-        )
-        .eq("student_id", student.id);
-      data = fallback.data;
-    } else if (primary.error || !primary.data) {
-      setAssignments([]);
-      setLoading(false);
-      return;
-    } else {
-      data = primary.data;
-    }
-
-    if (!data) {
-      setAssignments([]);
-      setLoading(false);
-      return;
-    }
-
-    const chapterIds = [
-      ...new Set(
-        data
-          .map((row) => {
-            const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
-            return assignment?.chapter_id ?? null;
-          })
-          .filter((id): id is string => Boolean(id))
-      ),
-    ];
-
-    const chapterMap = new Map<string, { title: string; hsk_level: number; chapter_number: number }>();
-    if (chapterIds.length > 0) {
-      const { data: chapters } = await supabase
-        .from("hsk_chapters")
-        .select("id, title, hsk_level, chapter_number")
-        .in("id", chapterIds);
-
-      (chapters ?? []).forEach((chapter) => {
-        chapterMap.set(chapter.id, {
-          title: chapter.title,
-          hsk_level: chapter.hsk_level,
-          chapter_number: chapter.chapter_number,
-        });
-      });
-    }
-
-    const levelPrefix = `hsk${student.hskLevel}-`;
-
-    const items = data
-      .map((row) => {
-        const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
-        if (!assignment?.chapter_id?.startsWith(levelPrefix)) return null;
-
-        const chapter = chapterMap.get(assignment.chapter_id);
-        const chapterTitle = chapter?.title ?? assignment.chapter_id;
-        const chapterNumber =
-          chapter?.chapter_number ??
-          Number.parseInt(assignment.chapter_id.match(/-ch(\d+)$/)?.[1] ?? "0", 10);
-
-        const status: AssignmentStatus = row.is_completed
-          ? "completed"
-          : row.started_at
-            ? "in_progress"
-            : "not_started";
-
-        return {
-          studentAssignmentId: row.id,
-          assignmentId: assignment.id,
-          title: assignment.title,
-          assignmentKey: assignment.assignment_key ?? "",
-          orderIndex: assignment.order_index,
-          chapterId: assignment.chapter_id,
-          chapterNumber,
-          chapterTitle,
-          isLocked: row.is_locked,
-          isCompleted: row.is_completed,
-          score: row.score,
-          correctCount: row.correct_count ?? null,
-          totalQuestions: row.total_questions ?? null,
-          questionPoolCount: null as number | null,
-          status,
-        };
-      })
-      .filter((item): item is AssignmentToggle => item !== null)
-      .sort((a, b) => a.chapterNumber - b.chapterNumber || a.orderIndex - b.orderIndex);
-
-    const aAssignmentIds = items
-      .filter((item) => isAssignmentALevel(item.assignmentKey))
-      .map((item) => item.assignmentId);
-    const questionCounts = await getQuestionCountsByAssignmentIds(supabase, aAssignmentIds);
-    const enrichedItems = items.map((item) => ({
-      ...item,
-      questionPoolCount: isAssignmentALevel(item.assignmentKey)
-        ? questionCounts.get(item.assignmentId) ?? null
-        : null,
-    }));
-
-    setAssignments(enrichedItems);
-    setLoading(false);
-  };
 
   const loadAssignmentAttempts = async (studentAssignmentId: string) => {
     setLoadingAttemptsId(studentAssignmentId);
@@ -280,56 +126,59 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
     }
   };
 
-  const loadLatestFlag = async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("promotion_flags")
-      .select("status, target_level, note")
-      .eq("student_id", student.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    setLatestFlag(
-      data
-        ? { status: data.status, targetLevel: data.target_level, note: data.note }
-        : null
-    );
-  };
-
-  useEffect(() => {
-    void loadAssignments();
-    void loadLatestFlag();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student.id, student.hskLevel]);
-
   const toggleLock = async (studentAssignmentId: string) => {
+    const previous = assignments;
     setUpdatingId(studentAssignmentId);
+    setAssignments((current) =>
+      current.map((item) =>
+        item.studentAssignmentId === studentAssignmentId
+          ? { ...item, isLocked: !item.isLocked }
+          : item
+      )
+    );
+
     const response = await fetch(`/api/teacher/assignments/${studentAssignmentId}/toggle-lock`, {
       method: "PATCH",
     });
-    if (response.ok) {
-      await loadAssignments();
+    if (!response.ok) {
+      setAssignments(previous);
+    } else {
+      router.refresh();
     }
     setUpdatingId(null);
   };
 
-  const toggleChapterLock = async (chapterAssignments: AssignmentToggle[], wantUnlocked: boolean) => {
+  const toggleChapterLock = async (
+    chapterAssignments: AssignmentToggle[],
+    wantUnlocked: boolean
+  ) => {
     const chapterId = chapterAssignments[0]?.chapterId;
     if (!chapterId) return;
 
     const toUpdate = chapterAssignments.filter((item) => item.isLocked === wantUnlocked);
     if (toUpdate.length === 0) return;
 
+    const previous = assignments;
+    const ids = new Set(toUpdate.map((item) => item.studentAssignmentId));
     setUpdatingChapterId(chapterId);
-    const results = await Promise.all(
-      toUpdate.map((item) =>
-        fetch(`/api/teacher/assignments/${item.studentAssignmentId}/toggle-lock`, { method: "PATCH" })
+    setAssignments((current) =>
+      current.map((item) =>
+        ids.has(item.studentAssignmentId) ? { ...item, isLocked: !wantUnlocked } : item
       )
     );
 
-    if (results.every((response) => response.ok)) {
-      await loadAssignments();
+    const results = await Promise.all(
+      toUpdate.map((item) =>
+        fetch(`/api/teacher/assignments/${item.studentAssignmentId}/toggle-lock`, {
+          method: "PATCH",
+        })
+      )
+    );
+
+    if (!results.every((response) => response.ok)) {
+      setAssignments(previous);
+    } else {
+      router.refresh();
     }
     setUpdatingChapterId(null);
   };
@@ -354,7 +203,7 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
     setNote("");
     setFlagOpen(false);
     setFlagSubmitting(false);
-    await loadLatestFlag();
+    router.refresh();
   };
 
   const isMaxLevel = student.hskLevel >= MAX_HSK_LEVEL;
@@ -408,7 +257,7 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
   };
 
   return (
-    <TeacherShell>
+    <>
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/teacher/dashboard" className="hover:text-foreground">
           Dashboard
@@ -454,9 +303,7 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
         </CardContent>
       </Card>
 
-      {loading ? (
-        <p className="text-muted-foreground">Loading assignments...</p>
-      ) : grouped.length === 0 ? (
+      {grouped.length === 0 ? (
         <Card className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
           <CardContent className="p-8 text-center">
             <p className="text-muted-foreground">
@@ -487,7 +334,9 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
                         id={`chapter-lock-${chapterId}`}
                         checked={chapterUnlocked}
                         disabled={chapterUpdating || updatingId !== null}
-                        onCheckedChange={(checked) => void toggleChapterLock(chapterAssignments, checked)}
+                        onCheckedChange={(checked) =>
+                          void toggleChapterLock(chapterAssignments, checked)
+                        }
                         aria-label={chapterUnlocked ? "Lock chapter" : "Unlock chapter"}
                       />
                     </div>
@@ -504,8 +353,10 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
                           <div className="flex flex-wrap items-center justify-between gap-4">
                             <button
                               type="button"
-                              onClick={() => toggleAssignmentAttempts(assignment.studentAssignmentId)}
-                              className="flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left hover:bg-muted/40 -mx-2 px-2 py-1"
+                              onClick={() =>
+                                toggleAssignmentAttempts(assignment.studentAssignmentId)
+                              }
+                              className="-mx-2 flex min-w-0 flex-1 items-start gap-2 rounded-lg px-2 py-1 text-left hover:bg-muted/40"
                               aria-expanded={isExpanded}
                             >
                               <ChevronDown
@@ -532,14 +383,18 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
                                 disabled={
                                   updatingId === assignment.studentAssignmentId || chapterUpdating
                                 }
-                                onCheckedChange={() => void toggleLock(assignment.studentAssignmentId)}
-                                aria-label={assignment.isLocked ? "Unlock assignment" : "Lock assignment"}
+                                onCheckedChange={() =>
+                                  void toggleLock(assignment.studentAssignmentId)
+                                }
+                                aria-label={
+                                  assignment.isLocked ? "Unlock assignment" : "Lock assignment"
+                                }
                               />
                             </div>
                           </div>
 
                           {isExpanded ? (
-                            <div className="mt-3 ml-6 rounded-xl border border-border bg-muted/30 p-3">
+                            <div className="ml-6 mt-3 rounded-xl border border-border bg-muted/30 p-3">
                               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 Attempt history (latest 5)
                               </p>
@@ -631,6 +486,6 @@ export function StudentDetailContent({ student }: StudentDetailContentProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </TeacherShell>
+    </>
   );
 }

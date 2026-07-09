@@ -27,7 +27,9 @@ interface TypingGameProps {
     correctWords: number
     incorrectWords: number
     totalKeystrokes: number
-  }) => void
+  }) => void | Promise<void>
+  saveState?: "idle" | "saving" | "saved" | "error"
+  saveMessage?: string | null
 }
 
 interface WordTileProps {
@@ -59,7 +61,13 @@ const WordTile = memo(function WordTile({ wordState, index }: WordTileProps) {
   )
 })
 
-export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGameProps) {
+export function TypingGame({
+  initialWordPool,
+  returnHref,
+  onFinished,
+  saveState = "idle",
+  saveMessage = null,
+}: TypingGameProps) {
   const [words, setWords] = useState<WordState[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [input, setInput] = useState("")
@@ -275,11 +283,26 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
             </div>
           </div>
 
+          {saveState === "saving" ? (
+            <p className="text-sm text-muted-foreground">Saving assignment progress…</p>
+          ) : null}
+          {saveState === "saved" ? (
+            <p className="text-sm text-emerald-600">{saveMessage ?? "Assignment successfully saved."}</p>
+          ) : null}
+          {saveState === "error" ? (
+            <p className="text-sm text-destructive">
+              {saveMessage ?? "Failed to save assignment progress."}
+            </p>
+          ) : null}
+
           <div className="flex items-center justify-center gap-3 pt-4">
             {returnHref ? (
               <Link
                 href={returnHref}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-foreground hover:border-primary hover:text-primary transition-colors"
+                aria-disabled={saveState === "saving"}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-foreground hover:border-primary hover:text-primary transition-colors ${
+                  saveState === "saving" ? "pointer-events-none opacity-50" : ""
+                }`}
               >
                 <Home className="w-5 h-5" />
                 <span>Back to chapter</span>
@@ -287,7 +310,8 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
             ) : null}
             <button
               onClick={initializeGame}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              disabled={saveState === "saving"}
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               <RotateCcw className="w-5 h-5" />
               <span>Coba Lagi</span>

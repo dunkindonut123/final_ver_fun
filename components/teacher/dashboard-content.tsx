@@ -1,22 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { CreateClassroomDialog } from "@/components/teacher/create-classroom-dialog";
-import { TeacherShell } from "@/components/layout/teacher-shell";
+import type { TeacherClassroomRow } from "@/lib/teacher/queries/classrooms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Check, Plus, Users } from "lucide-react";
-
-interface Classroom {
-  id: string;
-  name: string;
-  class_code: string;
-  hsk_level: number;
-  student_count: number;
-}
 
 interface TeacherDashboardContentProps {
   teacher: {
@@ -24,52 +16,16 @@ interface TeacherDashboardContentProps {
     name: string;
     email: string;
   };
+  initialClassrooms: TeacherClassroomRow[];
 }
 
-export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProps) {
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading] = useState(true);
+export function TeacherDashboardContent({
+  teacher,
+  initialClassrooms,
+}: TeacherDashboardContentProps) {
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-
-  const loadClassrooms = async () => {
-    const supabase = createClient();
-    const { data: classroomRows } = await supabase
-      .from("classrooms")
-      .select("id, name, class_code, hsk_level")
-      .eq("teacher_id", teacher.id)
-      .order("created_at", { ascending: false });
-
-    if (!classroomRows || classroomRows.length === 0) {
-      setClassrooms([]);
-      setLoading(false);
-      return;
-    }
-
-    const classroomIds = classroomRows.map((classroom) => classroom.id);
-    const { data: studentRows } = await supabase
-      .from("students")
-      .select("classroom_id")
-      .in("classroom_id", classroomIds);
-
-    const countMap = new Map<string, number>();
-    for (const row of studentRows ?? []) {
-      if (!row.classroom_id) continue;
-      countMap.set(row.classroom_id, (countMap.get(row.classroom_id) ?? 0) + 1);
-    }
-
-    setClassrooms(
-      classroomRows.map((classroom) => ({
-        ...classroom,
-        student_count: countMap.get(classroom.id) ?? 0,
-      }))
-    );
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    void loadClassrooms();
-  }, [teacher.id]);
 
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -78,7 +34,7 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
   };
 
   return (
-    <TeacherShell>
+    <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">My Classrooms</h1>
@@ -93,9 +49,7 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
         </Button>
       </div>
 
-      {loading ? (
-        <p className="text-muted-foreground">Loading classrooms...</p>
-      ) : classrooms.length === 0 ? (
+      {initialClassrooms.length === 0 ? (
         <Card className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
           <CardContent className="p-12 text-center">
             <p className="text-lg text-muted-foreground">
@@ -105,7 +59,7 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {classrooms.map((classroom) => (
+          {initialClassrooms.map((classroom) => (
             <Card
               key={classroom.id}
               className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5 transition-all hover:-translate-y-0.5 hover:shadow-xl"
@@ -114,7 +68,9 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div>
                     <h2 className="text-xl font-bold text-foreground">{classroom.name}</h2>
-                    <Badge className="mt-2 rounded-full bg-[#1e5fa8] text-white">HSK {classroom.hsk_level}</Badge>
+                    <Badge className="mt-2 rounded-full bg-[#1e5fa8] text-white">
+                      HSK {classroom.hsk_level}
+                    </Badge>
                   </div>
                   <div className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
@@ -123,9 +79,19 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
                 </div>
 
                 <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#1e5fa8]/20 bg-[#1e5fa8]/5 p-3">
-                  <code className="flex-1 font-mono text-sm font-bold text-[#1e5fa8]">{classroom.class_code}</code>
-                  <Button size="sm" variant="outline" onClick={() => handleCopy(classroom.class_code)}>
-                    {copiedCode === classroom.class_code ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <code className="flex-1 font-mono text-sm font-bold text-[#1e5fa8]">
+                    {classroom.class_code}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCopy(classroom.class_code)}
+                  >
+                    {copiedCode === classroom.class_code ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
 
@@ -143,8 +109,8 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
         teacherName={teacher.name}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onCreated={() => void loadClassrooms()}
+        onCreated={() => router.refresh()}
       />
-    </TeacherShell>
+    </>
   );
 }

@@ -1,22 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { TeacherShell } from "@/components/layout/teacher-shell";
+import type { ClassroomStudentRow } from "@/lib/teacher/queries/classroom-students";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight } from "lucide-react";
-
-interface StudentRow {
-  id: string;
-  name: string;
-  completedCount: number;
-  unlockedCount: number;
-  totalCount: number;
-  overallScore: number;
-}
 
 interface ClassroomContentProps {
   classroom: {
@@ -26,90 +15,15 @@ interface ClassroomContentProps {
     hsk_level: number;
   };
   teacherId: string;
+  initialStudents: ClassroomStudentRow[];
 }
 
-export function ClassroomContent({ classroom, teacherId }: ClassroomContentProps) {
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      const supabase = createClient();
-      const { data: studentRows } = await supabase
-        .from("students")
-        .select("user_id")
-        .eq("classroom_id", classroom.id)
-        .eq("teacher_id", teacherId);
-
-      if (!studentRows || studentRows.length === 0) {
-        setStudents([]);
-        setLoading(false);
-        return;
-      }
-
-      const ids = studentRows.map((row) => row.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", ids);
-
-      const { data: assignments } = await supabase
-        .from("student_assignments")
-        .select("student_id, is_locked, is_completed, score, assignment:assignments(chapter_id)")
-        .in("student_id", ids);
-
-      const stats = new Map<
-        string,
-        { completed: number; unlocked: number; total: number; scoreSum: number; scoreCount: number }
-      >();
-      ids.forEach((id) =>
-        stats.set(id, { completed: 0, unlocked: 0, total: 0, scoreSum: 0, scoreCount: 0 })
-      );
-
-      (assignments ?? []).forEach((row) => {
-        const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
-        if (!assignment?.chapter_id?.startsWith(`hsk${classroom.hsk_level}-`)) return;
-
-        const current = stats.get(row.student_id);
-        if (!current) return;
-        current.total += 1;
-        if (!row.is_locked) current.unlocked += 1;
-        if (row.is_completed) {
-          current.completed += 1;
-          if (typeof row.score === "number") {
-            current.scoreSum += row.score;
-            current.scoreCount += 1;
-          }
-        }
-      });
-
-      setStudents(
-        (profiles ?? []).map((profile) => {
-          const s = stats.get(profile.id) ?? {
-            completed: 0,
-            unlocked: 0,
-            total: 0,
-            scoreSum: 0,
-            scoreCount: 0,
-          };
-          return {
-            id: profile.id,
-            name: profile.full_name ?? "Student",
-            completedCount: s.completed,
-            unlockedCount: s.unlocked,
-            totalCount: s.total,
-            overallScore: s.scoreCount > 0 ? Math.round(s.scoreSum / s.scoreCount) : 0,
-          };
-        })
-      );
-      setLoading(false);
-    };
-
-    void load();
-  }, [classroom.id, classroom.hsk_level, teacherId]);
-
+export function ClassroomContent({
+  classroom,
+  initialStudents,
+}: ClassroomContentProps) {
   return (
-    <TeacherShell>
+    <>
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/teacher/dashboard" className="hover:text-foreground">
           Dashboard
@@ -128,9 +42,7 @@ export function ClassroomContent({ classroom, teacherId }: ClassroomContentProps
 
       <Card className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
         <CardContent className="p-0">
-          {loading ? (
-            <p className="p-6 text-muted-foreground">Loading students...</p>
-          ) : students.length === 0 ? (
+          {initialStudents.length === 0 ? (
             <p className="p-6 text-muted-foreground">No students in this classroom yet.</p>
           ) : (
             <>
@@ -142,7 +54,7 @@ export function ClassroomContent({ classroom, teacherId }: ClassroomContentProps
                 <div className="col-span-2 text-right">Actions</div>
               </div>
               <div className="divide-y">
-                {students.map((student) => {
+                {initialStudents.map((student) => {
                   const progress =
                     student.totalCount > 0
                       ? Math.round((student.completedCount / student.totalCount) * 100)
@@ -186,6 +98,6 @@ export function ClassroomContent({ classroom, teacherId }: ClassroomContentProps
           )}
         </CardContent>
       </Card>
-    </TeacherShell>
+    </>
   );
 }

@@ -1,8 +1,8 @@
-import { PortalLoadingShell, PulseBlock } from "@/components/layout/portal-loading-shell";
+import { PulseBlock } from "@/components/layout/portal-loading-shell";
 
 export default function StudentChapterLoading() {
   return (
-    <PortalLoadingShell portalLabel="Student Portal">
+    <>
       <PulseBlock className="mb-6 h-9 w-40" />
 
       <div className="mb-8 space-y-3">
@@ -32,6 +32,6 @@ export default function StudentChapterLoading() {
           ))}
         </div>
       </div>
-    </PortalLoadingShell>
+    </>
   );
 }
