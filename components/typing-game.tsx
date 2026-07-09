@@ -286,7 +286,7 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
           <>
             
             <p className="text-center text-muted-foreground text-sm animate-pulse">
-              Mulai mengetik untuk memulai...
+              Type to start...
             </p>
           </>
         )}
@@ -309,7 +309,7 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             className="w-full max-w-md px-5 py-4 text-2xl text-center bg-card border-2 border-border rounded-lg focus:outline-none focus:border-primary text-foreground font-semibold"
-            placeholder="Ketik di sini..."
+            placeholder="Answer here..."
             autoFocus
             autoComplete="off"
             autoCorrect="off"
