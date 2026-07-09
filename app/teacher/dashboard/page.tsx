@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TeacherDashboardContent } from "@/components/teacher/dashboard-content";
+import { getTeacherClassrooms } from "@/lib/teacher/queries/classrooms";
 
 export default async function TeacherDashboardPage() {
   const supabase = await createClient();
@@ -32,6 +33,8 @@ export default async function TeacherDashboardPage() {
 
   if (!teacherRecord) redirect("/login");
 
+  const classrooms = await getTeacherClassrooms(supabase, profile.id);
+
   return (
     <TeacherDashboardContent
       teacher={{
@@ -39,6 +42,7 @@ export default async function TeacherDashboardPage() {
         name: profile.full_name ?? "Teacher",
         email: profile.email,
       }}
+      initialClassrooms={classrooms}
     />
   );
 }

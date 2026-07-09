@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FunMandarinLogo } from "@/components/layout/fun-mandarin-logo";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
@@ -30,12 +30,20 @@ export function MarketingShell({
 }: MarketingShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push(signOutRedirect ?? "/login");
-    router.refresh();
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push(signOutRedirect ?? "/login");
+      router.refresh();
+    } catch {
+      setSigningOut(false);
+    }
   };
 
   return (
@@ -91,10 +99,15 @@ export function MarketingShell({
               variant="outline"
               size="sm"
               onClick={handleLogout}
+              disabled={signingOut}
               className="shrink-0 rounded-xl bg-background/70"
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
+              {signingOut ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="mr-2 h-4 w-4" />
+              )}
+              {signingOut ? "Signing out…" : "Sign Out"}
             </Button>
           </div>
         </div>

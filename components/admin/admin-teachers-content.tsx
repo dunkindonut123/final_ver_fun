@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
+import { useRouter } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/admin-shell";
+import type { AdminTeacherRow } from "@/lib/admin/queries/teachers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,34 +18,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface TeacherRow {
-  id: string;
-  full_name: string | null;
-  email: string;
-  status: string;
-  created_at: string;
+interface AdminTeachersContentProps {
+  initialTeachers: AdminTeacherRow[];
 }
 
-export function AdminTeachersContent() {
-  const [teachers, setTeachers] = useState<TeacherRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export function AdminTeachersContent({ initialTeachers }: AdminTeachersContentProps) {
+  const router = useRouter();
+  const [teachers, setTeachers] = useState(initialTeachers);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadTeachers = async () => {
-    const response = await fetch("/api/admin/teachers");
-    if (response.ok) {
-      const payload = await response.json();
-      setTeachers(payload.teachers ?? []);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    void loadTeachers();
-  }, []);
+    setTeachers(initialTeachers);
+  }, [initialTeachers]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +55,7 @@ export function AdminTeachersContent() {
     setForm({ name: "", email: "", password: "" });
     setCreateOpen(false);
     setSubmitting(false);
-    await loadTeachers();
+    router.refresh();
   };
 
   const statusColor = (status: string) => {
@@ -76,7 +65,8 @@ export function AdminTeachersContent() {
   };
 
   return (
-    <AdminShell title="Teachers" description="Manage teacher accounts">
+    <>
+      <AdminPageHeader title="Teachers" description="Manage teacher accounts" />
       <div className="mb-6 flex justify-end">
         <Button onClick={() => setCreateOpen(true)} className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">
           Create teacher
@@ -85,9 +75,7 @@ export function AdminTeachersContent() {
 
       <Card className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
         <CardContent className="p-0">
-          {loading ? (
-            <p className="p-5 text-muted-foreground">Loading...</p>
-          ) : teachers.length === 0 ? (
+          {teachers.length === 0 ? (
             <p className="p-5 text-muted-foreground">No teachers found.</p>
           ) : (
             <div className="divide-y">
@@ -161,6 +149,6 @@ export function AdminTeachersContent() {
           </form>
         </DialogContent>
       </Dialog>
-    </AdminShell>
+    </>
   );
 }

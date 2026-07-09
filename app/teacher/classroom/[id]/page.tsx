@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ClassroomContent } from "@/components/teacher/classroom-content";
+import { getClassroomStudentRows } from "@/lib/teacher/queries/classroom-students";
 
 export default async function TeacherClassroomPage({
   params,
@@ -31,6 +32,12 @@ export default async function TeacherClassroomPage({
 
   if (!classroom || classroom.teacher_id !== user.id) redirect("/teacher/dashboard");
 
+  const students = await getClassroomStudentRows(supabase, {
+    classroomId: classroom.id,
+    teacherId: user.id,
+    hskLevel: classroom.hsk_level,
+  });
+
   return (
     <ClassroomContent
       classroom={{
@@ -40,6 +47,7 @@ export default async function TeacherClassroomPage({
         hsk_level: classroom.hsk_level,
       }}
       teacherId={user.id}
+      initialStudents={students}
     />
   );
 }

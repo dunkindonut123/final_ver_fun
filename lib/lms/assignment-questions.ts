@@ -128,14 +128,45 @@ export async function getCombinedAQuestionsForChapter(
   supabase: SupabaseClient,
   chapterId: string
 ): Promise<AssignmentQuestionRow[]> {
-  const allRows: AssignmentQuestionRow[] = [];
+  const { data, error } = await supabase
+    .from("assignment_questions")
+    .select(
+      `
+      id,
+      assignment_id,
+      question_order,
+      answer,
+      pinyin_hint,
+      meaning_hint,
+      assignment:assignments!inner(chapter_id, assignment_key)
+    `
+    )
+    .eq("assignments.chapter_id", chapterId)
+    .in("assignments.assignment_key", A_ASSIGNMENT_KEYS)
+    .order("question_order", { ascending: true });
 
-  for (const assignmentKey of A_ASSIGNMENT_KEYS) {
-    const rows = await getQuestionsForAssignment(supabase, chapterId, assignmentKey);
-    allRows.push(...rows);
-  }
+  if (error) throw new Error(error.message);
 
-  return allRows;
+  const keyOrder = new Map(A_ASSIGNMENT_KEYS.map((key, index) => [key, index]));
+  const rows = (data ?? []) as (AssignmentQuestionRow & {
+    assignment?:
+      | { assignment_key?: string }
+      | { assignment_key?: string }[]
+      | null;
+  })[];
+
+  return rows
+    .slice()
+    .sort((a, b) => {
+      const aAssignment = Array.isArray(a.assignment) ? a.assignment[0] : a.assignment;
+      const bAssignment = Array.isArray(b.assignment) ? b.assignment[0] : b.assignment;
+      const aKey = aAssignment?.assignment_key ?? "";
+      const bKey = bAssignment?.assignment_key ?? "";
+      const byKey = (keyOrder.get(aKey as AssignmentKey) ?? 99) - (keyOrder.get(bKey as AssignmentKey) ?? 99);
+      if (byKey !== 0) return byKey;
+      return a.question_order - b.question_order;
+    })
+    .map(({ assignment: _assignment, ...row }) => row);
 }
 
 export async function getQuestionsForAssignment(

@@ -1,21 +1,18 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin/require-admin";
+import { fetchAdminTeachers } from "@/lib/admin/queries/teachers";
 
 export async function GET() {
   const auth = await requireAdminApi();
   if (!auth.ok) return auth.response;
 
-  const { data, error } = await auth.ctx.db
-    .from("profiles")
-    .select("id, full_name, email, status, created_at")
-    .eq("role", "teacher")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const teachers = await fetchAdminTeachers(auth.ctx.db);
+    return NextResponse.json({ teachers });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json({ teachers: data ?? [] });
 }
 
 export async function POST(request: Request) {

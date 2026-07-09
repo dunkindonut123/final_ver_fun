@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { StudentShell } from "@/components/layout/student-shell";
 import { Users, ChevronRight } from "lucide-react";
 
 interface Student {
@@ -43,7 +42,7 @@ export function StudentDashboardContent({ student, chapterProgress }: StudentDas
   }, [student.current_hsk_level]);
 
   return (
-    <StudentShell>
+    <>
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground">Welcome back, {student.name}!</h2>
         <p className="text-muted-foreground">Open chapters and complete unlocked assignments</p>
@@ -102,6 +101,6 @@ export function StudentDashboardContent({ student, chapterProgress }: StudentDas
           })}
         </div>
       </section>
-    </StudentShell>
+    </>
   );
 }

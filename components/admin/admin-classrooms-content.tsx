@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
+import { useRouter } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/admin-shell";
+import type { AdminClassroomRow } from "@/lib/admin/queries/classrooms";
+import type { AdminStudentRow } from "@/lib/admin/queries/students";
+import type { AdminTeacherRow } from "@/lib/admin/queries/teachers";
 import { HSK_LEVELS, MAX_HSK_LEVEL } from "@/lib/lms/hsk-levels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,31 +24,24 @@ import { generateClassCode } from "@/lib/lms/classroom";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface ClassroomRow {
-  id: string;
-  name: string;
-  classCode: string;
-  hskLevel: number;
-  teacherName: string;
-  studentCount: number;
-}
+type ClassroomRow = Pick<
+  AdminClassroomRow,
+  "id" | "name" | "classCode" | "hskLevel" | "teacherName" | "studentCount"
+>;
 
-interface StudentRow {
-  id: string;
-  name: string;
-  email: string;
-  hskLevel: number;
-  teacherName: string | null;
-  classroomId: string | null;
-  classroomName: string | null;
-  classCode: string | null;
-}
+type StudentRow = Pick<
+  AdminStudentRow,
+  | "id"
+  | "name"
+  | "email"
+  | "hskLevel"
+  | "teacherName"
+  | "classroomId"
+  | "classroomName"
+  | "classCode"
+>;
 
-interface TeacherOption {
-  id: string;
-  full_name: string | null;
-  status: string;
-}
+type TeacherOption = Pick<AdminTeacherRow, "id" | "full_name" | "status">;
 
 type ModalMode = "reassign" | "update-level" | "delete" | null;
 
@@ -54,11 +51,21 @@ function matchesSearch(text: string, query: string) {
   return text.toLowerCase().includes(query);
 }
 
-export function AdminClassroomsContent() {
-  const [classrooms, setClassrooms] = useState<ClassroomRow[]>([]);
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
-  const [loading, setLoading] = useState(true);
+interface AdminClassroomsContentProps {
+  initialClassrooms: ClassroomRow[];
+  initialStudents: StudentRow[];
+  initialTeachers: TeacherOption[];
+}
+
+export function AdminClassroomsContent({
+  initialClassrooms,
+  initialStudents,
+  initialTeachers,
+}: AdminClassroomsContentProps) {
+  const router = useRouter();
+  const [classrooms, setClassrooms] = useState(initialClassrooms);
+  const [students, setStudents] = useState(initialStudents);
+  const [teachers, setTeachers] = useState(initialTeachers);
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [createOpen, setCreateOpen] = useState(false);
@@ -75,36 +82,11 @@ export function AdminClassroomsContent() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = async () => {
-    const [classroomsRes, studentsRes, teachersRes] = await Promise.all([
-      fetch("/api/admin/classrooms"),
-      fetch("/api/admin/students"),
-      fetch("/api/admin/teachers"),
-    ]);
-
-    if (classroomsRes.ok) {
-      const payload = await classroomsRes.json();
-      setClassrooms(payload.classrooms ?? []);
-    }
-
-    if (studentsRes.ok) {
-      const payload = await studentsRes.json();
-      setStudents(payload.students ?? []);
-    }
-
-    if (teachersRes.ok) {
-      const payload = await teachersRes.json();
-      setTeachers(
-        (payload.teachers ?? []).filter((t: TeacherOption) => t.status === "active")
-      );
-    }
-
-    setLoading(false);
-  };
-
   useEffect(() => {
-    void loadData();
-  }, []);
+    setClassrooms(initialClassrooms);
+    setStudents(initialStudents);
+    setTeachers(initialTeachers);
+  }, [initialClassrooms, initialStudents, initialTeachers]);
 
   const query = search.trim().toLowerCase();
 
@@ -230,7 +212,7 @@ export function AdminClassroomsContent() {
     setForm({ name: "", teacherId: "", hskLevel: "1", classCode: "" });
     setCreateOpen(false);
     setSubmitting(false);
-    await loadData();
+    router.refresh();
   };
 
   const openModal = (mode: ModalMode, student: StudentRow) => {
@@ -267,7 +249,7 @@ export function AdminClassroomsContent() {
 
     setSubmitting(false);
     closeModal();
-    await loadData();
+    router.refresh();
   };
 
   const handleUpdateLevel = async () => {
@@ -290,7 +272,7 @@ export function AdminClassroomsContent() {
 
     setSubmitting(false);
     closeModal();
-    await loadData();
+    router.refresh();
   };
 
   const handleDelete = async () => {
@@ -309,7 +291,7 @@ export function AdminClassroomsContent() {
 
     setSubmitting(false);
     closeModal();
-    await loadData();
+    router.refresh();
   };
 
   const renderStudentRow = (student: StudentRow) => (
@@ -395,10 +377,11 @@ export function AdminClassroomsContent() {
   };
 
   return (
-    <AdminShell
-      title="Classrooms"
-      description="Manage classrooms and search students to reassign, update HSK level, or delete accounts"
-    >
+    <>
+      <AdminPageHeader
+        title="Classrooms"
+        description="Manage classrooms and search students to reassign, update HSK level, or delete accounts"
+      />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -419,9 +402,7 @@ export function AdminClassroomsContent() {
 
       <Card className="rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
         <CardContent className="p-0">
-          {loading ? (
-            <p className="p-5 text-muted-foreground">Loading...</p>
-          ) : visibleClassrooms.length === 0 && !showUnassigned ? (
+          {visibleClassrooms.length === 0 && !showUnassigned ? (
             <p className="p-5 text-muted-foreground">
               {query ? "No classrooms or students match your search." : "No classrooms found."}
             </p>
@@ -664,6 +645,6 @@ export function AdminClassroomsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminShell>
+    </>
   );
 }

@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StudentDetailContent } from "@/components/teacher/student-detail-content";
+import {
+  getLatestPromotionFlag,
+  getStudentAssignmentToggles,
+} from "@/lib/teacher/queries/student-detail";
 
 export default async function TeacherStudentPage({
   params,
@@ -31,22 +35,14 @@ export default async function TeacherStudentPage({
 
   if (!studentRow || studentRow.teacher_id !== user.id) redirect("/teacher/dashboard");
 
-  const { data: studentProfile } = await supabase
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", studentId)
-    .single();
-
-  let classroomName: string | null = null;
-  if (studentRow.classroom_id) {
-    const { data: classroom } = await supabase
-      .from("classrooms")
-      .select("name")
-      .eq("id", studentRow.classroom_id)
-      .single();
-
-    classroomName = classroom?.name ?? null;
-  }
+  const [{ data: studentProfile }, classroomResult, assignments, latestFlag] = await Promise.all([
+    supabase.from("profiles").select("full_name, email").eq("id", studentId).single(),
+    studentRow.classroom_id
+      ? supabase.from("classrooms").select("name").eq("id", studentRow.classroom_id).single()
+      : Promise.resolve({ data: null }),
+    getStudentAssignmentToggles(supabase, studentId, studentRow.current_hsk_level),
+    getLatestPromotionFlag(supabase, studentId),
+  ]);
 
   return (
     <StudentDetailContent
@@ -55,8 +51,10 @@ export default async function TeacherStudentPage({
         name: studentProfile?.full_name ?? "Student",
         email: studentProfile?.email ?? "",
         hskLevel: studentRow.current_hsk_level,
-        classroomName,
+        classroomName: classroomResult.data?.name ?? null,
       }}
+      initialAssignments={assignments}
+      initialLatestFlag={latestFlag}
     />
   );
 }
