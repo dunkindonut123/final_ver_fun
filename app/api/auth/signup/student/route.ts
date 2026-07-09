@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: studentError.message }, { status: 500 });
     }
 
-    await seedStudentAssignments(admin, userId, classroom.hsk_level);
+    await seedStudentAssignments(userId, classroom.hsk_level);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -15,6 +15,7 @@ export const config = {
     "/student/:path*",
     "/teacher/:path*",
     "/admin/:path*",
+    "/typing-hanzi",
     "/api/student/:path*",
     "/api/teacher/:path*",
     "/api/admin/:path*",

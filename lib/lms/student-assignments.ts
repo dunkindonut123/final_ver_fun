@@ -3,6 +3,7 @@ import {
   recordStudentAssignmentAttempt,
   type AssignmentCompletionInput,
 } from "@/lib/lms/assignment-attempts";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface AssignmentRow {
   id: string;
@@ -25,12 +26,10 @@ export interface StudentAssignmentRow {
   assignment?: AssignmentRow;
 }
 
-export async function seedStudentAssignments(
-  supabase: SupabaseClient,
-  studentId: string,
-  hskLevel: number
-) {
-  const { error } = await supabase.rpc("seed_student_assignments", {
+/** Seeds assignment rows for a student. Uses service-role only — the RPC is not executable by authenticated clients. */
+export async function seedStudentAssignments(studentId: string, hskLevel: number) {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("seed_student_assignments", {
     p_student_id: studentId,
     p_hsk_level: hskLevel,
   });
@@ -38,6 +37,42 @@ export async function seedStudentAssignments(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+/** Resolves the caller's student_assignments row for a chapter + assignment key (A1/A2/A3/B). */
+export async function findStudentAssignmentForChapterKey(
+  supabase: SupabaseClient,
+  studentId: string,
+  chapterId: string,
+  assignmentKey: AssignmentRow["assignment_key"]
+) {
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("assignments")
+    .select("id")
+    .eq("chapter_id", chapterId)
+    .eq("assignment_key", assignmentKey)
+    .maybeSingle();
+
+  if (assignmentError) {
+    throw new Error(assignmentError.message);
+  }
+
+  if (!assignment) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("student_assignments")
+    .select("id, student_id, is_locked")
+    .eq("student_id", studentId)
+    .eq("assignment_id", assignment.id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
 }
 
 export async function completeStudentAssignment(

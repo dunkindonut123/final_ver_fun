@@ -73,6 +73,7 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
   })
   const inputRef = useRef<HTMLInputElement>(null)
   const finishedNotifiedRef = useRef(false)
+  const poolCursorRef = useRef(0)
   const visibleWords = useMemo(() => words.slice(0, VISIBLE_WORD_COUNT), [words])
   const formattedTime = useMemo(() => {
     const mins = Math.floor(timeLeft / 60)
@@ -90,11 +91,35 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
     return Math.round((stats.correctWords / totalAttempted) * 100)
   }, [stats.correctWords, stats.incorrectWords])
 
+  const takeFromPool = useCallback(
+    (count: number): WordState[] => {
+      if (initialWordPool.length === 0 || count <= 0) return []
+
+      const nextWords: WordState[] = []
+      for (let i = 0; i < count; i++) {
+        const word = initialWordPool[poolCursorRef.current % initialWordPool.length]
+        poolCursorRef.current += 1
+        nextWords.push({
+          word,
+          status: "pending",
+          userInput: "",
+        })
+      }
+      return nextWords
+    },
+    [initialWordPool]
+  )
+
   const initializeGame = useCallback(() => {
-    const newWords = initialWordPool.map((word, index) => ({
-      word,
-      status: index === 0 ? "current" : "pending" as WordStatus,
-      userInput: "",
+    poolCursorRef.current = 0
+    // Bound initial queue — recycle from the pool instead of holding/growing the full source list.
+    const seedCount = Math.max(
+      VISIBLE_WORD_COUNT,
+      Math.min(initialWordPool.length || VISIBLE_WORD_COUNT, VISIBLE_WORD_COUNT * 2)
+    )
+    const newWords = takeFromPool(seedCount).map((wordState, index) => ({
+      ...wordState,
+      status: (index === 0 ? "current" : "pending") as WordStatus,
     }))
     setWords(newWords)
     setCurrentIndex(0)
@@ -108,7 +133,7 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
       correctKeystrokes: 0,
     })
     finishedNotifiedRef.current = false
-  }, [initialWordPool])
+  }, [initialWordPool, takeFromPool])
 
   useEffect(() => {
     initializeGame()
@@ -175,16 +200,18 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
         }
 
         if (shouldShiftRows) {
-          const remainingWords = newWords.slice(VISIBLE_WORD_COUNT)
+          let remainingWords = newWords.slice(VISIBLE_WORD_COUNT)
+          if (remainingWords.length < VISIBLE_WORD_COUNT) {
+            remainingWords = [
+              ...remainingWords,
+              ...takeFromPool(VISIBLE_WORD_COUNT - remainingWords.length),
+            ]
+          }
           if (remainingWords.length > 0) {
             remainingWords[0] = { ...remainingWords[0], status: "current" }
           }
-          const newRowWords = initialWordPool.map((word) => ({
-            word,
-            status: "pending" as WordStatus,
-            userInput: "",
-          }))
-          return [...remainingWords, ...newRowWords]
+          // Keep queue bounded to roughly two visible screens.
+          return remainingWords.slice(0, VISIBLE_WORD_COUNT * 2)
         }
 
         if (newIndex < newWords.length) {
@@ -214,7 +241,7 @@ export function TypingGame({ initialWordPool, returnHref, onFinished }: TypingGa
       
       setInput("")
     }
-  }, [currentIndex, gameState, input, initialWordPool, words])
+  }, [currentIndex, gameState, input, takeFromPool, words])
 
   if (gameState === "finished") {
     return (

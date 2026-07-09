@@ -63,7 +63,7 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    await seedStudentAssignments(auth.ctx.db, studentId, newHskLevel);
+    await seedStudentAssignments(studentId, newHskLevel);
 
     return NextResponse.json({ success: true });
   } catch (error) {

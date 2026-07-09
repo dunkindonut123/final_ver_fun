@@ -1,42 +1,74 @@
-import { MandarinTypingGame } from "@/components/mandarin-typing-game"
+import { redirect, notFound } from "next/navigation"
 import { isAssignmentALevel } from "@/lib/mandarin-typing-questions"
 import { isValidHskLevel } from "@/lib/lms/hsk-levels"
-import {
-  getQuestionsForAssignment,
-  toMandarinTypingQuestions,
-} from "@/lib/lms/assignment-questions"
+import { findStudentAssignmentForChapterKey } from "@/lib/lms/student-assignments"
+import type { AssignmentRow } from "@/lib/lms/student-assignments"
 import { createClient } from "@/lib/supabase/server"
-import { QuestionsUnavailable } from "@/components/student/questions-unavailable"
-import { notFound } from "next/navigation"
 
+function resolveAssignmentKey(query: {
+  assignment?: string
+  legacy?: string
+}): AssignmentRow["assignment_key"] | null {
+  if ((query.legacy ?? "").toLowerCase() === "b") {
+    return "B"
+  }
+
+  const key = (query.assignment ?? "").toUpperCase()
+  if (isAssignmentALevel(key) || key === "B") {
+    return key
+  }
+
+  return null
+}
+
+/**
+ * Legacy entry point. Resolves chapter/assignment query params to the caller's
+ * student_assignments row and redirects into the lock-aware student flow.
+ * Does not load questions or write legacy progress.
+ */
 export default async function TypingHanziPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ hsk?: string; assignment?: string; chapterId?: string }>
+  searchParams?: Promise<{
+    hsk?: string
+    assignment?: string
+    chapterId?: string
+    legacy?: string
+  }>
 }) {
   const query = searchParams ? await searchParams : {}
-  const hskLevel = Number.parseInt(query.hsk ?? "", 10)
-  const assignmentLevel = (query.assignment ?? "").toUpperCase()
   const chapterId = query.chapterId
+  const assignmentKey = resolveAssignmentKey(query)
+  const hskLevel = Number.parseInt(query.hsk ?? "", 10)
 
-  if (!isValidHskLevel(hskLevel) || !isAssignmentALevel(assignmentLevel) || !chapterId) {
+  if (!chapterId || !assignmentKey) {
+    notFound()
+  }
+
+  // HSK is optional for B/legacy links; when present it must be valid.
+  if (query.hsk !== undefined && query.hsk !== "" && !isValidHskLevel(hskLevel)) {
     notFound()
   }
 
   const supabase = await createClient()
-  const dbRows = await getQuestionsForAssignment(supabase, chapterId, assignmentLevel)
-  const questions = dbRows.length > 0 ? toMandarinTypingQuestions(dbRows) : []
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (questions.length === 0) {
-    return <QuestionsUnavailable />
+  if (!user) {
+    redirect("/login")
   }
 
-  return (
-    <MandarinTypingGame
-      hskLevel={hskLevel}
-      assignmentLevel={assignmentLevel}
-      chapterId={chapterId}
-      initialQuestions={questions}
-    />
+  const row = await findStudentAssignmentForChapterKey(
+    supabase,
+    user.id,
+    chapterId,
+    assignmentKey
   )
+
+  if (!row) {
+    redirect(`/student/chapter/${chapterId}`)
+  }
+
+  redirect(`/student/assignment/${row.id}`)
 }
