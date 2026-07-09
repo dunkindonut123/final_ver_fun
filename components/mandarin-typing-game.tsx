@@ -57,6 +57,9 @@ export function MandarinTypingGame({
   const [saveState, setSaveState] = useState<SaveState>("idle")
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const scoreRef = useRef(0)
+  const lastAutoPlayedKeyRef = useRef<string | null>(null)
+  const [autoPlayNonce, setAutoPlayNonce] = useState(0)
 
   const currentQuestion = questions[currentQuestionIndex]
 
@@ -67,17 +70,52 @@ export function MandarinTypingGame({
 
   const answerLength = currentQuestion?.answer.length ?? 0
 
-  const handlePlayHint = () => {
-    if (typeof window === "undefined" || !currentQuestion) {
+  const playPronunciation = useCallback((text: string) => {
+    if (typeof window === "undefined" || !text) {
       return
     }
 
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(currentQuestion.pinyinHint)
+    const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = "zh-CN"
-    utterance.rate = 0.9
+    utterance.rate = 0.85
+
+    const voices = window.speechSynthesis.getVoices()
+    const chineseVoice =
+      voices.find((voice) => voice.lang === "zh-CN") ??
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("zh"))
+    if (chineseVoice) {
+      utterance.voice = chineseVoice
+    }
+
     window.speechSynthesis.speak(utterance)
+  }, [])
+
+  const handlePlayHint = () => {
+    if (!currentQuestion?.answer) {
+      return
+    }
+    playPronunciation(currentQuestion.answer)
   }
+
+  useEffect(() => {
+    if (gameState !== "playing") {
+      return
+    }
+
+    const question = questions[currentQuestionIndex]
+    if (!question?.answer) {
+      return
+    }
+
+    const autoPlayKey = `${autoPlayNonce}:${currentQuestionIndex}:${question.id}`
+    if (lastAutoPlayedKeyRef.current === autoPlayKey) {
+      return
+    }
+    lastAutoPlayedKeyRef.current = autoPlayKey
+
+    playPronunciation(question.answer)
+  }, [autoPlayNonce, currentQuestionIndex, gameState, playPronunciation, questions])
 
   const handleSubmit = () => {
     if (!currentQuestion || answerSubmitted) {
@@ -85,24 +123,20 @@ export function MandarinTypingGame({
     }
 
     const isCorrect = normalizeInput(inputValue) === currentQuestion.answer
-    const isLastQuestion = currentQuestionIndex + 1 === totalQuestions
 
     setLastAnswerCorrect(isCorrect)
     setAnswerSubmitted(true)
 
     if (isCorrect) {
-      setScore((prev) => prev + 1)
-    }
-
-    if (isLastQuestion && saveState === "idle") {
-      void persistAssignmentCompletion()
+      scoreRef.current += 1
+      setScore(scoreRef.current)
     }
   }
 
   const goToNextQuestion = () => {
     if (currentQuestionIndex + 1 >= totalQuestions) {
       if (saveState === "idle") {
-        void persistAssignmentCompletion()
+        void persistAssignmentCompletion(scoreRef.current)
       }
       setGameState("finished")
       return
@@ -119,16 +153,18 @@ export function MandarinTypingGame({
     window.speechSynthesis.cancel()
     setCurrentQuestionIndex(0)
     setInputValue("")
+    scoreRef.current = 0
     setScore(0)
     setGameState("playing")
     setAnswerSubmitted(false)
     setLastAnswerCorrect(null)
     setSaveState("idle")
     setSaveMessage(null)
+    setAutoPlayNonce((prev) => prev + 1)
     inputRef.current?.focus()
   }
 
-  const persistAssignmentCompletion = useCallback(async () => {
+  const persistAssignmentCompletion = useCallback(async (finalCorrectCount?: number) => {
     if (!chapterId && !studentAssignmentId) {
       setSaveState("saved")
       return
@@ -139,22 +175,28 @@ export function MandarinTypingGame({
 
     try {
       if (studentAssignmentId) {
-        const percentScore = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
+        const correctCount = finalCorrectCount ?? scoreRef.current
+        const percentScore =
+          totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0
         const response = await fetch(`/api/student/assignments/${studentAssignmentId}/complete`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ score: percentScore }),
+          body: JSON.stringify({
+            score: percentScore,
+            correctCount,
+            totalQuestions,
+          }),
         })
 
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}))
           setSaveState("error")
-          setSaveMessage(payload.error ?? "Gagal menyimpan progress assignment.")
+          setSaveMessage(payload.error ?? "Failed to save assignment progress.")
           return
         }
 
         setSaveState("saved")
-        setSaveMessage("Assignment berhasil ditandai selesai.")
+        setSaveMessage("Assignment successfully saved.")
         return
       }
 
@@ -163,7 +205,7 @@ export function MandarinTypingGame({
 
       if (!userData.user) {
         setSaveState("error")
-        setSaveMessage("Sesi login tidak ditemukan. Silakan login ulang.")
+        setSaveMessage("Login session not found. Please sign in again.")
         return
       }
 
@@ -222,42 +264,43 @@ export function MandarinTypingGame({
       }
 
       setSaveState("saved")
-      setSaveMessage("Assignment berhasil ditandai selesai.")
+      setSaveMessage("Assignment successfully saved.")
     } catch {
       setSaveState("error")
-      setSaveMessage("Gagal menyimpan progress assignment.")
+      setSaveMessage("Failed to save assignment progress.")
     }
-  }, [assignmentLevel, chapterId, score, studentAssignmentId, totalQuestions])
-
-  useEffect(() => {
-    if (gameState !== "finished" || saveState !== "idle") {
-      return
-    }
-
-    void persistAssignmentCompletion()
-  }, [gameState, persistAssignmentCompletion, saveState])
+  }, [assignmentLevel, chapterId, studentAssignmentId, totalQuestions])
 
   if (totalQuestions === 0) {
     return <QuestionsUnavailable returnHref={returnHref} />
   }
 
   if (gameState === "finished") {
+    const scorePercent =
+      totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
+
     return (
       <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <section className="w-full max-w-2xl rounded-3xl border border-border bg-card p-8 text-center shadow-sm space-y-6">
-          <h1 className="text-3xl font-bold text-foreground">Game Selesai</h1>
-          <p className="text-muted-foreground">Skor Akhir Kamu</p>
+          <h1 className="text-3xl font-bold text-foreground">Assignment Completed</h1>
+          <p className="text-muted-foreground">Final Score</p>
 
-          <div className="mx-auto w-fit rounded-2xl border border-border bg-background px-10 py-6">
-            <p className="text-5xl font-bold text-primary">
-              {score}/{totalQuestions}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">Jawaban benar</p>
+          <div className="mx-auto flex w-fit items-stretch gap-4">
+            <div className="rounded-2xl border border-border bg-background px-10 py-6 text-center">
+              <p className="text-5xl font-bold text-primary">
+                {score}/{totalQuestions}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">Correct Answers</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background px-10 py-6 text-center">
+              <p className="text-5xl font-bold text-primary">{scorePercent}%</p>
+              <p className="mt-2 text-sm text-muted-foreground">Score</p>
+            </div>
           </div>
 
           {(saveState === "saving" || saveMessage) && (
             <p className="text-sm text-muted-foreground">
-              {saveState === "saving" ? "Menyimpan progress assignment..." : saveMessage}
+              {saveState === "saving" ? "Saving assignment progress..." : saveMessage}
             </p>
           )}
 
@@ -265,7 +308,7 @@ export function MandarinTypingGame({
             {saveState === "saving" ? (
               <span className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground opacity-70">
                 <Home className="h-4 w-4" />
-                Menyimpan progress...
+                Saving progress...
               </span>
             ) : (
               <Link
@@ -273,7 +316,7 @@ export function MandarinTypingGame({
                 className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
               >
                 <Home className="h-4 w-4" />
-                Beranda
+                Dashboard
               </Link>
             )}
             <button
@@ -281,7 +324,7 @@ export function MandarinTypingGame({
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <RotateCcw className="h-4 w-4" />
-              Main Lagi
+              Retry
             </button>
           </div>
         </section>
@@ -298,7 +341,7 @@ export function MandarinTypingGame({
             className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
           >
             <Home className="h-4 w-4" />
-            Kembali ke Dashboard
+            Return to Dashboard
           </Link>
           <p className="text-sm text-muted-foreground font-medium">HSK {hskLevel} - {assignmentLevel}</p>
         </div>
@@ -369,7 +412,7 @@ export function MandarinTypingGame({
               }
             }}
             className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg text-center text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Ketik jawaban hanzi di sini"
+            placeholder="Enter Hanzi Here"
             autoFocus
             autoComplete="off"
             autoCorrect="off"
@@ -386,8 +429,8 @@ export function MandarinTypingGame({
               }`}
             >
               {lastAnswerCorrect
-                ? "Benar"
-                : `Kurang tepat. Jawaban yang benar: ${currentQuestion.answer}`}
+                ? "Answer Correct"
+                : `Incorrect Answer, Correct Answer: ${currentQuestion.answer}`}
             </div>
           )}
 

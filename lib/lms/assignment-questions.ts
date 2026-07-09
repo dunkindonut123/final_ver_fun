@@ -16,13 +16,7 @@ export const CSV_COLUMNS_A = [
   "meaning_hint",
 ] as const;
 
-export const CSV_COLUMNS_B = [
-  "hsk_level",
-  "chapter_id",
-  "assignment_key",
-  "question_order",
-  "answer",
-] as const;
+const A_ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3"];
 
 export interface AssignmentQuestionRow {
   id: string;
@@ -93,6 +87,27 @@ export function toWordPool(rows: AssignmentQuestionRow[]): string[] {
     .map((row) => row.answer);
 }
 
+export async function getQuestionCountsByAssignmentIds(
+  supabase: SupabaseClient,
+  assignmentIds: string[]
+): Promise<Map<string, number>> {
+  const uniqueIds = [...new Set(assignmentIds)];
+  if (uniqueIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("assignment_questions")
+    .select("assignment_id")
+    .in("assignment_id", uniqueIds);
+
+  if (error) throw new Error(error.message);
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    counts.set(row.assignment_id, (counts.get(row.assignment_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function resolveAssignmentId(
   supabase: SupabaseClient,
   chapterId: string,
@@ -109,18 +124,40 @@ export async function resolveAssignmentId(
   return data?.id ?? null;
 }
 
+export async function getCombinedAQuestionsForChapter(
+  supabase: SupabaseClient,
+  chapterId: string
+): Promise<AssignmentQuestionRow[]> {
+  const allRows: AssignmentQuestionRow[] = [];
+
+  for (const assignmentKey of A_ASSIGNMENT_KEYS) {
+    const rows = await getQuestionsForAssignment(supabase, chapterId, assignmentKey);
+    allRows.push(...rows);
+  }
+
+  return allRows;
+}
+
 export async function getQuestionsForAssignment(
   supabase: SupabaseClient,
   chapterId: string,
   assignmentKey: AssignmentKey
 ): Promise<AssignmentQuestionRow[]> {
-  const assignmentId = await resolveAssignmentId(supabase, chapterId, assignmentKey);
-  if (!assignmentId) return [];
-
   const { data, error } = await supabase
     .from("assignment_questions")
-    .select("id, assignment_id, question_order, answer, pinyin_hint, meaning_hint")
-    .eq("assignment_id", assignmentId)
+    .select(
+      `
+      id,
+      assignment_id,
+      question_order,
+      answer,
+      pinyin_hint,
+      meaning_hint,
+      assignment:assignments!inner(chapter_id, assignment_key)
+    `
+    )
+    .eq("assignments.chapter_id", chapterId)
+    .eq("assignments.assignment_key", assignmentKey)
     .order("question_order", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -139,18 +176,16 @@ export function validateQuestionCsv(
     return { validRows, errors };
   }
 
-  const hasBFormat = headers.length === CSV_COLUMNS_B.length &&
-    CSV_COLUMNS_B.every((col) => headers.includes(col));
   const hasAFormat = headers.length === CSV_COLUMNS_A.length &&
     CSV_COLUMNS_A.every((col) => headers.includes(col));
 
-  if (!hasAFormat && !hasBFormat) {
-    const expected = `Expected columns: ${CSV_COLUMNS_A.join(", ")} (A1–A3) or ${CSV_COLUMNS_B.join(", ")} (B).`;
+  if (!hasAFormat) {
+    const expected = `Expected columns: ${CSV_COLUMNS_A.join(", ")} (A1–A3 only). Assignment B is generated automatically from A1, A2, and A3.`;
     errors.push({ row: 0, message: `Unknown columns. ${expected}` });
     return { validRows, errors };
   }
 
-  const allowedHeaders = new Set(hasBFormat ? CSV_COLUMNS_B : CSV_COLUMNS_A);
+  const allowedHeaders = new Set(CSV_COLUMNS_A);
   for (const header of headers) {
     if (!allowedHeaders.has(header as (typeof CSV_COLUMNS_A)[number])) {
       errors.push({ row: 0, field: header, message: `Unknown column "${header}".` });
@@ -200,6 +235,15 @@ export function validateQuestionCsv(
       return;
     }
 
+    if (assignmentKey === "B") {
+      errors.push({
+        row: rowNumber,
+        field: "assignment_key",
+        message: "Assignment B is generated automatically from A1, A2, and A3 for the same chapter.",
+      });
+      return;
+    }
+
     const orderRaw = row.question_order ?? "";
     const questionOrder = parseInt(orderRaw, 10);
     if (!orderRaw || Number.isNaN(questionOrder) || questionOrder < 1) {
@@ -224,40 +268,31 @@ export function validateQuestionCsv(
     }
     seenKeys.add(scopeKey);
 
-    if (assignmentKey !== "B") {
-      const pinyinHint = row.pinyin_hint ?? "";
-      const meaningHint = row.meaning_hint ?? "";
-      if (!pinyinHint) {
-        errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for A1–A3." });
-        return;
-      }
-      if (!meaningHint) {
-        errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for A1–A3." });
-        return;
-      }
-      validRows.push({
-        hsk_level: hskLevel,
-        chapter_id: chapterId,
-        assignment_key: assignmentKey,
-        question_order: questionOrder,
-        answer,
-        pinyin_hint: pinyinHint,
-        meaning_hint: meaningHint,
-      });
+    const pinyinHint = row.pinyin_hint ?? "";
+    const meaningHint = row.meaning_hint ?? "";
+    if (!pinyinHint) {
+      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for A1–A3." });
       return;
     }
-
+    if (!meaningHint) {
+      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for A1–A3." });
+      return;
+    }
     validRows.push({
       hsk_level: hskLevel,
       chapter_id: chapterId,
       assignment_key: assignmentKey,
       question_order: questionOrder,
       answer,
+      pinyin_hint: pinyinHint,
+      meaning_hint: meaningHint,
     });
   });
 
   return { validRows, errors };
 }
+
+const IMPORT_INSERT_CHUNK_SIZE = 500;
 
 async function loadChapterIds(supabase: SupabaseClient): Promise<Set<string>> {
   const { data, error } = await supabase.from("hsk_chapters").select("id");
@@ -284,13 +319,66 @@ async function loadAssignmentMap(supabase: SupabaseClient): Promise<Map<string, 
   return map;
 }
 
+async function insertQuestionRowsInChunks(
+  supabase: SupabaseClient,
+  rows: {
+    assignment_id: string;
+    question_order: number;
+    answer: string;
+    pinyin_hint: string | null;
+    meaning_hint: string | null;
+  }[]
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += IMPORT_INSERT_CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + IMPORT_INSERT_CHUNK_SIZE);
+    const { error } = await supabase.from("assignment_questions").insert(chunk);
+    if (error) throw new Error(error.message);
+  }
+}
+
+async function syncAssignmentBForChapters(
+  supabase: SupabaseClient,
+  chapterIds: string[],
+  assignmentMap: Map<string, AssignmentLookup>
+): Promise<void> {
+  const uniqueChapterIds = [...new Set(chapterIds)];
+
+  for (const chapterId of uniqueChapterIds) {
+    const bAssignment = assignmentMap.get(`${chapterId}:B`);
+    if (!bAssignment) continue;
+
+    const combinedRows = await getCombinedAQuestionsForChapter(supabase, chapterId);
+
+    const { error: deleteError } = await supabase
+      .from("assignment_questions")
+      .delete()
+      .eq("assignment_id", bAssignment.id);
+
+    if (deleteError) throw new Error(deleteError.message);
+
+    if (combinedRows.length === 0) continue;
+
+    const inserts = combinedRows.map((row, index) => ({
+      assignment_id: bAssignment.id,
+      question_order: index + 1,
+      answer: row.answer,
+      pinyin_hint: null,
+      meaning_hint: null,
+    }));
+
+    await insertQuestionRowsInChunks(supabase, inserts);
+  }
+}
+
 export async function importQuestionRows(
   supabase: SupabaseClient,
   uploadedBy: string,
   rows: ParsedQuestionCsvRow[]
 ): Promise<ImportSummary> {
-  const chapterIds = await loadChapterIds(supabase);
-  const assignmentMap = await loadAssignmentMap(supabase);
+  const [chapterIds, assignmentMap] = await Promise.all([
+    loadChapterIds(supabase),
+    loadAssignmentMap(supabase),
+  ]);
   const errors: CsvValidationError[] = [];
 
   for (let i = 0; i < rows.length; i++) {
@@ -323,18 +411,30 @@ export async function importQuestionRows(
     grouped.set(key, group);
   }
 
-  let imported = 0;
+  const assignmentIds = [...grouped.keys()]
+    .map((scopeKey) => assignmentMap.get(scopeKey)?.id)
+    .filter((id): id is string => Boolean(id));
+
+  if (assignmentIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("assignment_questions")
+      .delete()
+      .in("assignment_id", assignmentIds);
+
+    if (deleteError) throw new Error(deleteError.message);
+  }
+
+  const allInserts: {
+    assignment_id: string;
+    question_order: number;
+    answer: string;
+    pinyin_hint: string | null;
+    meaning_hint: string | null;
+  }[] = [];
 
   for (const [scopeKey, groupRows] of grouped) {
     const assignment = assignmentMap.get(scopeKey);
     if (!assignment) continue;
-
-    const { error: deleteError } = await supabase
-      .from("assignment_questions")
-      .delete()
-      .eq("assignment_id", assignment.id);
-
-    if (deleteError) throw new Error(deleteError.message);
 
     const inserts = groupRows
       .slice()
@@ -347,11 +447,20 @@ export async function importQuestionRows(
         meaning_hint: row.meaning_hint ?? null,
       }));
 
-    const { error: insertError } = await supabase.from("assignment_questions").insert(inserts);
-    if (insertError) throw new Error(insertError.message);
-
-    imported += inserts.length;
+    allInserts.push(...inserts);
   }
+
+  await insertQuestionRowsInChunks(supabase, allInserts);
+  const imported = allInserts.length;
+
+  const chaptersToSyncB = [
+    ...new Set(
+      rows
+        .filter((row) => A_ASSIGNMENT_KEYS.includes(row.assignment_key))
+        .map((row) => row.chapter_id)
+    ),
+  ];
+  await syncAssignmentBForChapters(supabase, chaptersToSyncB, assignmentMap);
 
   await supabase.from("question_import_batches").insert({
     uploaded_by: uploadedBy,
@@ -362,15 +471,7 @@ export async function importQuestionRows(
   return { imported, assignmentsReplaced: grouped.size, errors: [] };
 }
 
-export function assignmentCsvTemplate(assignmentKey: AssignmentKey): string {
-  if (assignmentKey === "B") {
-    return [
-      CSV_COLUMNS_B.join(","),
-      "1,hsk1-ch1,B,1,爱好",
-      "1,hsk1-ch1,B,2,安静",
-    ].join("\n");
-  }
-
+export function assignmentCsvTemplate(): string {
   return [
     CSV_COLUMNS_A.join(","),
     "1,hsk1-ch1,A1,1,你好,ni hao,Halo",

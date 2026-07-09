@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StudentShell } from "@/components/layout/student-shell";
@@ -26,13 +25,10 @@ interface Chapter {
 
 interface StudentDashboardContentProps {
   student: Student;
+  chapterProgress: Record<string, { completed: number; total: number }>;
 }
 
-export function StudentDashboardContent({ student }: StudentDashboardContentProps) {
-  const [chapterProgress, setChapterProgress] = useState<Map<string, { completed: number; total: number }>>(
-    new Map()
-  );
-
+export function StudentDashboardContent({ student, chapterProgress }: StudentDashboardContentProps) {
   const chapters = useMemo<Chapter[]>(() => {
     const generated: Chapter[] = [];
     for (let chapter = 1; chapter <= 10; chapter += 1) {
@@ -45,35 +41,6 @@ export function StudentDashboardContent({ student }: StudentDashboardContentProp
     }
     return generated;
   }, [student.current_hsk_level]);
-
-  useEffect(() => {
-    const loadProgress = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("student_assignments")
-        .select("is_completed, assignment:assignments(chapter_id)")
-        .eq("student_id", student.id);
-
-      if (!data) return;
-
-      const next = new Map<string, { completed: number; total: number }>();
-
-      data.forEach((row) => {
-        const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
-        const chapterId = assignment?.chapter_id;
-        if (!chapterId) return;
-
-        const current = next.get(chapterId) ?? { completed: 0, total: 0 };
-        current.total += 1;
-        if (row.is_completed) current.completed += 1;
-        next.set(chapterId, current);
-      });
-
-      setChapterProgress(next);
-    };
-
-    void loadProgress();
-  }, [student.id]);
 
   return (
     <StudentShell>
@@ -105,7 +72,7 @@ export function StudentDashboardContent({ student }: StudentDashboardContentProp
 
         <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
           {chapters.map((chapter) => {
-            const progress = chapterProgress.get(chapter.id) ?? { completed: 0, total: 4 };
+            const progress = chapterProgress[chapter.id] ?? { completed: 0, total: 4 };
             const isComplete = progress.completed === progress.total && progress.total > 0;
 
             return (

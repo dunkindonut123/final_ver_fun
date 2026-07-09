@@ -50,6 +50,9 @@ npm install
      - `hsk_chapters.description` (chapter description shown to students)
      - `student_assignments.started_at` (drives the "in progress" status)
      - a unique partial index enforcing one pending `promotion_flags` row per student
+   - Then: [supabase/migration_v2_assignment_questions.sql](supabase/migration_v2_assignment_questions.sql) (if using admin question uploads)
+   - Then: [supabase/migration_v2_assignment_attempts.sql](supabase/migration_v2_assignment_attempts.sql) — `student_assignment_attempts` for teacher attempt history
+   - Then: [supabase/migration_v2_assignment_attempt_metrics.sql](supabase/migration_v2_assignment_attempt_metrics.sql) — `correct_count` / `total_questions` for assignment A scoring
 6. In **Authentication → Providers → Email**:
    - Enable email/password auth
    - **Disable** "Confirm email" (required for current signup flow)

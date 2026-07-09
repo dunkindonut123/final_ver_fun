@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChapterTabs } from "@/components/student/chapter-tabs";
-import { ArrowLeft, CheckCircle2, ExternalLink, Lock, Play } from "lucide-react";
+import { AssignmentRetryButton } from "@/components/student/assignment-retry-button";
+import { formatAAssignmentScoreDisplay } from "@/lib/lms/assignment-score-display";
+import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
+import { ChapterMaterialViewer } from "@/components/student/chapter-material-viewer";
+import { ArrowLeft, CheckCircle2, Lock, Play } from "lucide-react";
 
 type AssignmentStatus = "locked" | "not_started" | "in_progress" | "completed";
 
-interface AssignmentItem {
+export interface ChapterAssignmentItem {
   studentAssignmentId: string;
   assignmentId: string;
   title: string;
@@ -21,77 +23,32 @@ interface AssignmentItem {
   isLocked: boolean;
   isCompleted: boolean;
   score: number | null;
+  correctCount: number | null;
+  totalQuestions: number | null;
+  questionPoolCount: number | null;
   status: AssignmentStatus;
 }
 
-interface ChapterDetailContentProps {
+export interface ChapterMaterialInfo {
   chapterId: string;
+  fileName: string;
+}
+
+interface ChapterDetailContentProps {
   chapterTitle: string;
   chapterDescription: string | null;
   hskLevel: number;
-  studentId: string;
+  assignments: ChapterAssignmentItem[];
+  material: ChapterMaterialInfo | null;
 }
 
 export function ChapterDetailContent({
-  chapterId,
   chapterTitle,
   chapterDescription,
   hskLevel,
-  studentId,
+  assignments,
+  material,
 }: ChapterDetailContentProps) {
-  const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("student_assignments")
-        .select(
-          "id, is_locked, is_completed, score, started_at, assignment:assignments(id, title, order_index, assignment_key, chapter_id)"
-        )
-        .eq("student_id", studentId);
-
-      if (!data) {
-        setLoading(false);
-        return;
-      }
-
-      const items = data
-        .map((row) => {
-          const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
-          if (!assignment || assignment.chapter_id !== chapterId) return null;
-
-          const status: AssignmentStatus = row.is_locked
-            ? "locked"
-            : row.is_completed
-              ? "completed"
-              : row.started_at
-                ? "in_progress"
-                : "not_started";
-
-          return {
-            studentAssignmentId: row.id,
-            assignmentId: assignment.id,
-            title: assignment.title,
-            orderIndex: assignment.order_index,
-            assignmentKey: assignment.assignment_key,
-            isLocked: row.is_locked,
-            isCompleted: row.is_completed,
-            score: row.score,
-            status,
-          } satisfies AssignmentItem;
-        })
-        .filter((item): item is AssignmentItem => item !== null)
-        .sort((a, b) => a.orderIndex - b.orderIndex);
-
-      setAssignments(items);
-      setLoading(false);
-    };
-
-    void load();
-  }, [chapterId, studentId]);
-
   return (
     <StudentShell>
       <Link
@@ -112,13 +69,24 @@ export function ChapterDetailContent({
 
       <ChapterTabs
         assignmentsContent={
-          loading ? (
-            <p className="text-muted-foreground">Loading assignments...</p>
-          ) : assignments.length === 0 ? (
+          assignments.length === 0 ? (
             <p className="text-center text-muted-foreground">No assignments for this chapter yet.</p>
           ) : (
             <div className="grid gap-4">
-              {assignments.map((assignment) => (
+              {assignments.map((assignment) => {
+                const scoreDisplay =
+                  assignment.score !== null && assignment.status !== "locked"
+                    ? isAssignmentALevel(assignment.assignmentKey)
+                      ? formatAAssignmentScoreDisplay(
+                          assignment.score,
+                          assignment.correctCount,
+                          assignment.totalQuestions,
+                          assignment.questionPoolCount
+                        )
+                      : `${assignment.score}%`
+                    : null;
+
+                return (
                 <Card
                   key={assignment.studentAssignmentId}
                   className={`rounded-2xl border ${
@@ -131,8 +99,14 @@ export function ChapterDetailContent({
                     <div>
                       <p className="text-sm text-muted-foreground">Assignment {assignment.orderIndex}</p>
                       <h2 className="text-lg font-semibold text-foreground">{assignment.title}</h2>
-                      {assignment.status === "completed" && assignment.score !== null ? (
-                        <p className="mt-1 text-sm text-emerald-600">Score: {assignment.score}%</p>
+                      {scoreDisplay ? (
+                        <p
+                          className={`mt-1 text-sm ${
+                            assignment.status === "completed" ? "text-emerald-600" : "text-muted-foreground"
+                          }`}
+                        >
+                          {assignment.status === "completed" ? "Score" : "Last score"}: {scoreDisplay}
+                        </p>
                       ) : assignment.status === "in_progress" ? (
                         <p className="mt-1 text-sm text-amber-600">In progress</p>
                       ) : null}
@@ -144,9 +118,14 @@ export function ChapterDetailContent({
                         Locked by teacher
                       </div>
                     ) : assignment.status === "completed" ? (
-                      <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Completed
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Completed
+                          </div>
+                          <AssignmentRetryButton studentAssignmentId={assignment.studentAssignmentId} />
+                        </div>
                       </div>
                     ) : (
                       <Button asChild className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]">
@@ -158,23 +137,22 @@ export function ChapterDetailContent({
                     )}
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )
         }
         materialsContent={
-          <div className="py-4 text-center">
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Chapter materials</h2>
-            <p className="mb-6 text-muted-foreground">
-              Study guides and reference materials for {chapterTitle} will appear here.
-            </p>
-            <Button asChild variant="outline" className="rounded-xl">
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View materials (coming soon)
-              </a>
-            </Button>
-          </div>
+          material ? (
+            <ChapterMaterialViewer chapterId={material.chapterId} fileName={material.fileName} />
+          ) : (
+            <div className="py-8 text-center">
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Chapter materials</h2>
+              <p className="text-muted-foreground">
+                No materials have been uploaded for {chapterTitle} yet.
+              </p>
+            </div>
+          )
         }
       />
     </StudentShell>

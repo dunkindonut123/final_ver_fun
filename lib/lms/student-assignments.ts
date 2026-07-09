@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  recordStudentAssignmentAttempt,
+  type AssignmentCompletionInput,
+} from "@/lib/lms/assignment-attempts";
 
 export interface AssignmentRow {
   id: string;
@@ -15,6 +19,8 @@ export interface StudentAssignmentRow {
   is_locked: boolean;
   is_completed: boolean;
   score: number | null;
+  correct_count: number | null;
+  total_questions: number | null;
   completed_at: string | null;
   assignment?: AssignmentRow;
 }
@@ -37,14 +43,62 @@ export async function seedStudentAssignments(
 export async function completeStudentAssignment(
   supabase: SupabaseClient,
   studentAssignmentId: string,
-  score: number
+  input: AssignmentCompletionInput
 ) {
+  const { data: existing, error: fetchError } = await supabase
+    .from("student_assignments")
+    .select("started_at")
+    .eq("id", studentAssignmentId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(fetchError.message);
+  }
+
+  const normalizedScore = Math.min(100, Math.max(0, Math.round(input.score)));
+  const correctCount =
+    typeof input.correctCount === "number" ? Math.max(0, Math.round(input.correctCount)) : null;
+  const totalQuestions =
+    typeof input.totalQuestions === "number" ? Math.max(1, Math.round(input.totalQuestions)) : null;
+  const completedAt = new Date().toISOString();
+
   const { error } = await supabase
     .from("student_assignments")
     .update({
       is_completed: true,
-      score: Math.min(100, Math.max(0, Math.round(score))),
-      completed_at: new Date().toISOString(),
+      score: normalizedScore,
+      correct_count: correctCount,
+      total_questions: totalQuestions,
+      completed_at: completedAt,
+    })
+    .eq("id", studentAssignmentId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await recordStudentAssignmentAttempt(
+    supabase,
+    studentAssignmentId,
+    {
+      score: normalizedScore,
+      correctCount: correctCount ?? undefined,
+      totalQuestions: totalQuestions ?? undefined,
+    },
+    existing?.started_at ?? null
+  );
+}
+
+export async function retryStudentAssignment(
+  supabase: SupabaseClient,
+  studentAssignmentId: string
+) {
+  const { error } = await supabase
+    .from("student_assignments")
+    .update({
+      is_completed: false,
+      started_at: null,
+      completed_at: null,
     })
     .eq("id", studentAssignmentId);
 
@@ -53,7 +107,32 @@ export async function completeStudentAssignment(
   }
 }
 
+export interface AssignmentBMetrics {
+  wpm: number;
+  accuracy: number;
+  correctWords: number;
+  incorrectWords: number;
+}
+
 export function assignmentScoreFromCorrect(correct: number, total: number) {
   if (total <= 0) return 0;
   return Math.round((correct / total) * 100);
+}
+
+export function assignmentBScoreFromMetrics(metrics: AssignmentBMetrics) {
+  const wpmScore = Math.min(100, Math.round((metrics.wpm / 50) * 100));
+  const totalWords = metrics.correctWords + metrics.incorrectWords;
+  const wordAccuracy =
+    totalWords > 0 ? Math.round((metrics.correctWords / totalWords) * 100) : metrics.accuracy;
+  const throughputScore = Math.min(100, Math.round((metrics.correctWords / 15) * 100));
+
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(
+        0.35 * metrics.accuracy + 0.25 * wpmScore + 0.2 * wordAccuracy + 0.2 * throughputScore
+      )
+    )
+  );
 }

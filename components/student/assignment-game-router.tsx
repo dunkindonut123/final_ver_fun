@@ -21,7 +21,6 @@ interface AssignmentGameRouterProps {
   assignmentKey: string;
   assignmentTitle: string;
   isLocked: boolean;
-  isCompleted: boolean;
   mandarinQuestions?: MandarinTypingQuestion[];
   assignmentBWords?: string[];
 }
@@ -33,7 +32,6 @@ export function AssignmentGameRouter({
   assignmentKey,
   assignmentTitle,
   isLocked,
-  isCompleted,
   mandarinQuestions,
   assignmentBWords,
 }: AssignmentGameRouterProps) {
@@ -68,13 +66,11 @@ export function AssignmentGameRouter({
               <ArrowLeft className="h-4 w-4" />
               {assignmentTitle}
             </Link>
-            {isCompleted ? (
-              <span className="text-sm text-emerald-600">Completed</span>
-            ) : null}
           </div>
         </div>
         <AssignmentBGame
           chapterId={chapterId}
+          studentAssignmentId={studentAssignmentId}
           initialWordPool={assignmentBWords}
           returnHref={returnHref}
         />

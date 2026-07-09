@@ -10,7 +10,6 @@ import {
   ASSIGNMENT_KEYS,
   assignmentCsvTemplate,
   validateQuestionCsv,
-  type AssignmentKey,
 } from "@/lib/lms/assignment-questions";
 import { parseCsv } from "@/lib/lms/csv-parser";
 import { Download, Loader2, Upload } from "lucide-react";
@@ -94,8 +93,8 @@ export function AdminQuestionsContent() {
     setValidationErrors([]);
   };
 
-  const handleTemplateDownload = (assignmentKey: AssignmentKey) => {
-    downloadTextFile(`questions-template-${assignmentKey}.csv`, assignmentCsvTemplate(assignmentKey));
+  const handleTemplateDownload = () => {
+    downloadTextFile("questions-template-A1-A3.csv", assignmentCsvTemplate());
   };
 
   const canImport = file && validationErrors.length === 0 && preview.length > 0;
@@ -110,19 +109,10 @@ export function AdminQuestionsContent() {
           type="button"
           variant="outline"
           className="rounded-xl"
-          onClick={() => handleTemplateDownload("A1")}
+          onClick={() => handleTemplateDownload()}
         >
           <Download className="mr-2 h-4 w-4" />
           A1–A3 template
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-xl"
-          onClick={() => handleTemplateDownload("B")}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          B template
         </Button>
       </div>
 
@@ -139,7 +129,8 @@ export function AdminQuestionsContent() {
             />
             <p className="text-xs text-muted-foreground">
               Re-uploading rows for the same chapter and assignment replaces all existing questions for that
-              assignment. Supported keys: {ASSIGNMENT_KEYS.join(", ")}.
+              assignment. Upload A1, A2, and A3 only — assignment B is generated automatically from those
+              questions for each chapter. Supported keys: {ASSIGNMENT_KEYS.filter((key) => key !== "B").join(", ")}.
             </p>
           </div>
 
