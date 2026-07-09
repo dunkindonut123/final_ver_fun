@@ -31,7 +31,7 @@ create table if not exists public.classrooms (
 );
 
 create index if not exists classrooms_teacher_id_idx on public.classrooms (teacher_id);
-create index if not exists classrooms_class_code_idx on public.classrooms (upper(class_code));
+create index if not exists classrooms_class_code_idx on public.classrooms (upper(trim(class_code)));
 
 alter table public.students
   add column if not exists classroom_id uuid references public.classrooms(id) on delete set null;
@@ -152,7 +152,9 @@ end;
 $$;
 
 revoke all on function public.seed_student_assignments(uuid, int) from public;
-grant execute on function public.seed_student_assignments(uuid, int) to authenticated;
+revoke all on function public.seed_student_assignments(uuid, int) from anon;
+revoke all on function public.seed_student_assignments(uuid, int) from authenticated;
+grant execute on function public.seed_student_assignments(uuid, int) to service_role;
 
 -- Role checks for RLS (security definer avoids profiles self-recursion)
 create or replace function public.is_admin()

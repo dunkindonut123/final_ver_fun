@@ -62,7 +62,7 @@ export async function PATCH(
       return NextResponse.json({ error: studentError.message }, { status: 500 });
     }
 
-    await seedStudentAssignments(auth.ctx.db, flag.student_id, flag.target_level);
+    await seedStudentAssignments(flag.student_id, flag.target_level);
 
     const { error: flagUpdateError } = await auth.ctx.db
       .from("promotion_flags")

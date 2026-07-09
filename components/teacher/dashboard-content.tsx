@@ -40,27 +40,30 @@ export function TeacherDashboardContent({ teacher }: TeacherDashboardContentProp
       .eq("teacher_id", teacher.id)
       .order("created_at", { ascending: false });
 
-    if (!classroomRows) {
+    if (!classroomRows || classroomRows.length === 0) {
       setClassrooms([]);
       setLoading(false);
       return;
     }
 
-    const withCounts = await Promise.all(
-      classroomRows.map(async (classroom) => {
-        const { count } = await supabase
-          .from("students")
-          .select("user_id", { count: "exact", head: true })
-          .eq("classroom_id", classroom.id);
+    const classroomIds = classroomRows.map((classroom) => classroom.id);
+    const { data: studentRows } = await supabase
+      .from("students")
+      .select("classroom_id")
+      .in("classroom_id", classroomIds);
 
-        return {
-          ...classroom,
-          student_count: count ?? 0,
-        };
-      })
+    const countMap = new Map<string, number>();
+    for (const row of studentRows ?? []) {
+      if (!row.classroom_id) continue;
+      countMap.set(row.classroom_id, (countMap.get(row.classroom_id) ?? 0) + 1);
+    }
+
+    setClassrooms(
+      classroomRows.map((classroom) => ({
+        ...classroom,
+        student_count: countMap.get(classroom.id) ?? 0,
+      }))
     );
-
-    setClassrooms(withCounts);
     setLoading(false);
   };
 
