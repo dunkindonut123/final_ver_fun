@@ -78,23 +78,33 @@ export default async function StudentChapterPage({
 
   if (!user) redirect("/login");
 
-  const [{ data: profile }, { data: chapter }, { data: student }, assignmentQuery] =
-    await Promise.all([
-      supabase.from("profiles").select("role").eq("id", user.id).single(),
-      supabase
-        .from("hsk_chapters")
-        .select("id, title, hsk_level, description")
-        .eq("id", chapterId)
-        .single(),
-      supabase.from("students").select("current_hsk_level").eq("user_id", user.id).single(),
-      supabase
-        .from("student_assignments")
-        .select(
-          "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
-        )
-        .eq("student_id", user.id)
-        .eq("assignments.chapter_id", chapterId),
-    ]);
+  const [
+    { data: profile },
+    { data: chapter },
+    { data: student },
+    assignmentQuery,
+    { data: chapterMaterial },
+  ] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase
+      .from("hsk_chapters")
+      .select("id, title, hsk_level, description")
+      .eq("id", chapterId)
+      .single(),
+    supabase.from("students").select("current_hsk_level").eq("user_id", user.id).single(),
+    supabase
+      .from("student_assignments")
+      .select(
+        "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
+      )
+      .eq("student_id", user.id)
+      .eq("assignments.chapter_id", chapterId),
+    supabase
+      .from("chapter_materials")
+      .select("chapter_id, file_name")
+      .eq("chapter_id", chapterId)
+      .maybeSingle(),
+  ]);
 
   let assignmentRows: Parameters<typeof mapAssignmentRows>[0] | null = assignmentQuery.data;
   if (assignmentQuery.error?.message?.includes("correct_count")) {
@@ -132,6 +142,14 @@ export default async function StudentChapterPage({
       chapterDescription={chapter.description ?? null}
       hskLevel={chapter.hsk_level}
       assignments={assignments}
+      material={
+        chapterMaterial
+          ? {
+              chapterId: chapterMaterial.chapter_id,
+              fileName: chapterMaterial.file_name,
+            }
+          : null
+      }
     />
   );
 }

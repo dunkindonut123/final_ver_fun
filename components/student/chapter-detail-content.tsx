@@ -9,7 +9,8 @@ import { ChapterTabs } from "@/components/student/chapter-tabs";
 import { AssignmentRetryButton } from "@/components/student/assignment-retry-button";
 import { formatAAssignmentScoreDisplay } from "@/lib/lms/assignment-score-display";
 import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
-import { ArrowLeft, CheckCircle2, ExternalLink, Lock, Play } from "lucide-react";
+import { ChapterMaterialViewer } from "@/components/student/chapter-material-viewer";
+import { ArrowLeft, CheckCircle2, Lock, Play } from "lucide-react";
 
 type AssignmentStatus = "locked" | "not_started" | "in_progress" | "completed";
 
@@ -28,11 +29,17 @@ export interface ChapterAssignmentItem {
   status: AssignmentStatus;
 }
 
+export interface ChapterMaterialInfo {
+  chapterId: string;
+  fileName: string;
+}
+
 interface ChapterDetailContentProps {
   chapterTitle: string;
   chapterDescription: string | null;
   hskLevel: number;
   assignments: ChapterAssignmentItem[];
+  material: ChapterMaterialInfo | null;
 }
 
 export function ChapterDetailContent({
@@ -40,6 +47,7 @@ export function ChapterDetailContent({
   chapterDescription,
   hskLevel,
   assignments,
+  material,
 }: ChapterDetailContentProps) {
   return (
     <StudentShell>
@@ -135,18 +143,16 @@ export function ChapterDetailContent({
           )
         }
         materialsContent={
-          <div className="py-4 text-center">
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Chapter materials</h2>
-            <p className="mb-6 text-muted-foreground">
-              Study guides and reference materials for {chapterTitle} will appear here.
-            </p>
-            <Button asChild variant="outline" className="rounded-xl">
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View materials (coming soon)
-              </a>
-            </Button>
-          </div>
+          material ? (
+            <ChapterMaterialViewer chapterId={material.chapterId} fileName={material.fileName} />
+          ) : (
+            <div className="py-8 text-center">
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Chapter materials</h2>
+              <p className="text-muted-foreground">
+                No materials have been uploaded for {chapterTitle} yet.
+              </p>
+            </div>
+          )
         }
       />
     </StudentShell>

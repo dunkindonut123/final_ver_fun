@@ -58,6 +58,8 @@ export function MandarinTypingGame({
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scoreRef = useRef(0)
+  const lastAutoPlayedKeyRef = useRef<string | null>(null)
+  const [autoPlayNonce, setAutoPlayNonce] = useState(0)
 
   const currentQuestion = questions[currentQuestionIndex]
 
@@ -68,17 +70,52 @@ export function MandarinTypingGame({
 
   const answerLength = currentQuestion?.answer.length ?? 0
 
-  const handlePlayHint = () => {
-    if (typeof window === "undefined" || !currentQuestion) {
+  const playPronunciation = useCallback((text: string) => {
+    if (typeof window === "undefined" || !text) {
       return
     }
 
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(currentQuestion.pinyinHint)
+    const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = "zh-CN"
-    utterance.rate = 0.9
+    utterance.rate = 0.85
+
+    const voices = window.speechSynthesis.getVoices()
+    const chineseVoice =
+      voices.find((voice) => voice.lang === "zh-CN") ??
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("zh"))
+    if (chineseVoice) {
+      utterance.voice = chineseVoice
+    }
+
     window.speechSynthesis.speak(utterance)
+  }, [])
+
+  const handlePlayHint = () => {
+    if (!currentQuestion?.answer) {
+      return
+    }
+    playPronunciation(currentQuestion.answer)
   }
+
+  useEffect(() => {
+    if (gameState !== "playing") {
+      return
+    }
+
+    const question = questions[currentQuestionIndex]
+    if (!question?.answer) {
+      return
+    }
+
+    const autoPlayKey = `${autoPlayNonce}:${currentQuestionIndex}:${question.id}`
+    if (lastAutoPlayedKeyRef.current === autoPlayKey) {
+      return
+    }
+    lastAutoPlayedKeyRef.current = autoPlayKey
+
+    playPronunciation(question.answer)
+  }, [autoPlayNonce, currentQuestionIndex, gameState, playPronunciation, questions])
 
   const handleSubmit = () => {
     if (!currentQuestion || answerSubmitted) {
@@ -123,6 +160,7 @@ export function MandarinTypingGame({
     setLastAnswerCorrect(null)
     setSaveState("idle")
     setSaveMessage(null)
+    setAutoPlayNonce((prev) => prev + 1)
     inputRef.current?.focus()
   }
 
