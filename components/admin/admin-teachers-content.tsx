@@ -29,6 +29,9 @@ export function AdminTeachersContent({ initialTeachers }: AdminTeachersContentPr
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<AdminTeacherRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setTeachers(initialTeachers);
@@ -55,6 +58,38 @@ export function AdminTeachersContent({ initialTeachers }: AdminTeachersContentPr
     setForm({ name: "", email: "", password: "" });
     setCreateOpen(false);
     setSubmitting(false);
+    router.refresh();
+  };
+
+  const openDeleteModal = (teacher: AdminTeacherRow) => {
+    setSelectedTeacher(teacher);
+    setDeleteError(null);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleting) return;
+    setSelectedTeacher(null);
+    setDeleteError(null);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedTeacher) return;
+    setDeleting(true);
+    setDeleteError(null);
+
+    const response = await fetch(`/api/admin/teachers/${selectedTeacher.id}`, {
+      method: "DELETE",
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setDeleteError(payload.error ?? "Failed to delete teacher");
+      setDeleting(false);
+      return;
+    }
+
+    setDeleting(false);
+    setSelectedTeacher(null);
     router.refresh();
   };
 
@@ -88,9 +123,18 @@ export function AdminTeachersContent({ initialTeachers }: AdminTeachersContentPr
                       Joined {new Date(teacher.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <Badge className={`rounded-full capitalize text-white ${statusColor(teacher.status)}`}>
-                    {teacher.status}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={`rounded-full capitalize text-white ${statusColor(teacher.status)}`}>
+                      {teacher.status}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      onClick={() => openDeleteModal(teacher)}
+                      className="rounded-xl border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -147,6 +191,32 @@ export function AdminTeachersContent({ initialTeachers }: AdminTeachersContentPr
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedTeacher)} onOpenChange={(open) => !open && closeDeleteModal()}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Delete teacher</DialogTitle>
+            <DialogDescription>
+              Delete {selectedTeacher?.full_name ?? selectedTeacher?.email}? Their classrooms and
+              students stay available so you can reassign them to another teacher later. This cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteModal} disabled={deleting} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-xl bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Deleting..." : "Delete teacher"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

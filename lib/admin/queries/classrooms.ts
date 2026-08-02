@@ -5,7 +5,7 @@ export type AdminClassroomRow = {
   name: string;
   classCode: string;
   hskLevel: number;
-  teacherId: string;
+  teacherId: string | null;
   teacherName: string;
   studentCount: number;
   createdAt: string;
@@ -19,7 +19,9 @@ export async function fetchAdminClassrooms(db: SupabaseClient): Promise<AdminCla
 
   if (error) throw new Error(error.message);
 
-  const teacherIds = [...new Set((classrooms ?? []).map((c) => c.teacher_id))];
+  const teacherIds = [
+    ...new Set((classrooms ?? []).map((c) => c.teacher_id).filter((id): id is string => Boolean(id))),
+  ];
 
   const { data: teachers } =
     teacherIds.length > 0
@@ -46,7 +48,9 @@ export async function fetchAdminClassrooms(db: SupabaseClient): Promise<AdminCla
     classCode: classroom.class_code,
     hskLevel: classroom.hsk_level,
     teacherId: classroom.teacher_id,
-    teacherName: teacherMap.get(classroom.teacher_id)?.full_name ?? "Teacher",
+    teacherName: classroom.teacher_id
+      ? teacherMap.get(classroom.teacher_id)?.full_name ?? "Teacher"
+      : "Unassigned",
     studentCount: countMap.get(classroom.id) ?? 0,
     createdAt: classroom.created_at,
   }));

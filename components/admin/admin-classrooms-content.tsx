@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 
 type ClassroomRow = Pick<
   AdminClassroomRow,
-  "id" | "name" | "classCode" | "hskLevel" | "teacherName" | "studentCount"
+  "id" | "name" | "classCode" | "hskLevel" | "teacherId" | "teacherName" | "studentCount"
 >;
 
 type StudentRow = Pick<
@@ -43,7 +43,13 @@ type StudentRow = Pick<
 
 type TeacherOption = Pick<AdminTeacherRow, "id" | "full_name" | "status">;
 
-type ModalMode = "reassign" | "update-level" | "delete" | "delete-classroom" | null;
+type ModalMode =
+  | "reassign"
+  | "update-level"
+  | "delete"
+  | "delete-classroom"
+  | "reassign-teacher"
+  | null;
 
 const UNASSIGNED_KEY = "__unassigned__";
 
@@ -79,6 +85,7 @@ export function AdminClassroomsContent({
   const [selected, setSelected] = useState<StudentRow | null>(null);
   const [selectedClassroom, setSelectedClassroom] = useState<ClassroomRow | null>(null);
   const [classroomId, setClassroomId] = useState("");
+  const [reassignTeacherId, setReassignTeacherId] = useState("");
   const [newHskLevel, setNewHskLevel] = useState("2");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -232,10 +239,19 @@ export function AdminClassroomsContent({
     setError(null);
   };
 
+  const openReassignTeacherModal = (classroom: ClassroomRow) => {
+    setSelected(null);
+    setSelectedClassroom(classroom);
+    setReassignTeacherId("");
+    setModal("reassign-teacher");
+    setError(null);
+  };
+
   const closeModal = () => {
     setModal(null);
     setSelected(null);
     setSelectedClassroom(null);
+    setReassignTeacherId("");
     setError(null);
   };
 
@@ -325,6 +341,29 @@ export function AdminClassroomsContent({
     router.refresh();
   };
 
+  const handleReassignTeacher = async () => {
+    if (!selectedClassroom || !reassignTeacherId) return;
+    setSubmitting(true);
+    setError(null);
+
+    const response = await fetch(`/api/admin/classrooms/${selectedClassroom.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teacherId: reassignTeacherId }),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to reassign teacher");
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
+    closeModal();
+    router.refresh();
+  };
+
   const renderStudentRow = (student: StudentRow) => (
     <div
       key={student.id}
@@ -390,8 +429,16 @@ export function AdminClassroomsContent({
               </p>
             </div>
           </button>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Badge className="rounded-full bg-[#1e5fa8] text-white">HSK {classroom.hskLevel}</Badge>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openReassignTeacherModal(classroom)}
+              className="rounded-xl"
+            >
+              Reassign teacher
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -707,6 +754,55 @@ export function AdminClassroomsContent({
               {submitting ? "Deleting..." : "Delete classroom"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modal === "reassign-teacher"} onOpenChange={(open) => !open && closeModal()}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Reassign teacher</DialogTitle>
+            <DialogDescription>
+              Move {selectedClassroom?.name} to another active teacher. Students in this classroom
+              stay enrolled and are updated to the new teacher.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedClassroom ? (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-muted p-3 text-sm">
+                <p>
+                  <span className="text-muted-foreground">Current teacher:</span>{" "}
+                  {selectedClassroom.teacherName}
+                </p>
+              </div>
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <div className="space-y-2">
+                <Label>New teacher</Label>
+                <select
+                  value={reassignTeacherId}
+                  onChange={(e) => setReassignTeacherId(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Select teacher...</option>
+                  {teachers
+                    .filter((teacher) => teacher.id !== selectedClassroom.teacherId)
+                    .map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.full_name ?? "Teacher"}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={handleReassignTeacher}
+                  disabled={!reassignTeacherId || submitting}
+                  className="rounded-xl bg-[#1e5fa8] text-white hover:bg-[#1a5292]"
+                >
+                  {submitting ? "Saving..." : "Reassign teacher"}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>
