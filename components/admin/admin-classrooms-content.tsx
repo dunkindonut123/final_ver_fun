@@ -43,7 +43,7 @@ type StudentRow = Pick<
 
 type TeacherOption = Pick<AdminTeacherRow, "id" | "full_name" | "status">;
 
-type ModalMode = "reassign" | "update-level" | "delete" | null;
+type ModalMode = "reassign" | "update-level" | "delete" | "delete-classroom" | null;
 
 const UNASSIGNED_KEY = "__unassigned__";
 
@@ -77,6 +77,7 @@ export function AdminClassroomsContent({
   });
   const [modal, setModal] = useState<ModalMode>(null);
   const [selected, setSelected] = useState<StudentRow | null>(null);
+  const [selectedClassroom, setSelectedClassroom] = useState<ClassroomRow | null>(null);
   const [classroomId, setClassroomId] = useState("");
   const [newHskLevel, setNewHskLevel] = useState("2");
   const [error, setError] = useState<string | null>(null);
@@ -217,15 +218,24 @@ export function AdminClassroomsContent({
 
   const openModal = (mode: ModalMode, student: StudentRow) => {
     setSelected(student);
+    setSelectedClassroom(null);
     setModal(mode);
     setError(null);
     setClassroomId("");
     setNewHskLevel(String(Math.min(MAX_HSK_LEVEL, student.hskLevel + 1)));
   };
 
+  const openDeleteClassroomModal = (classroom: ClassroomRow) => {
+    setSelected(null);
+    setSelectedClassroom(classroom);
+    setModal("delete-classroom");
+    setError(null);
+  };
+
   const closeModal = () => {
     setModal(null);
     setSelected(null);
+    setSelectedClassroom(null);
     setError(null);
   };
 
@@ -294,6 +304,27 @@ export function AdminClassroomsContent({
     router.refresh();
   };
 
+  const handleDeleteClassroom = async () => {
+    if (!selectedClassroom) return;
+    setSubmitting(true);
+    setError(null);
+
+    const response = await fetch(`/api/admin/classrooms/${selectedClassroom.id}`, {
+      method: "DELETE",
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to delete classroom");
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
+    closeModal();
+    router.refresh();
+  };
+
   const renderStudentRow = (student: StudentRow) => (
     <div
       key={student.id}
@@ -334,12 +365,12 @@ export function AdminClassroomsContent({
 
     return (
       <div key={classroom.id} className="border-b border-border/60 last:border-b-0">
-        <button
-          type="button"
-          onClick={() => toggleExpanded(classroom.id)}
-          className="flex w-full flex-wrap items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
-        >
-          <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/30">
+          <button
+            type="button"
+            onClick={() => toggleExpanded(classroom.id)}
+            className="flex min-w-0 flex-1 items-start gap-3 text-left"
+          >
             {isExpanded ? (
               <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
             ) : (
@@ -358,11 +389,19 @@ export function AdminClassroomsContent({
                 students
               </p>
             </div>
+          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge className="rounded-full bg-[#1e5fa8] text-white">HSK {classroom.hskLevel}</Badge>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openDeleteClassroomModal(classroom)}
+              className="rounded-xl border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Delete
+            </Button>
           </div>
-          <Badge className="shrink-0 rounded-full bg-[#1e5fa8] text-white">
-            HSK {classroom.hskLevel}
-          </Badge>
-        </button>
+        </div>
         {isExpanded ? (
           visibleStudents.length === 0 ? (
             <p className="border-t border-border/60 bg-muted/20 px-5 py-4 pl-12 text-sm text-muted-foreground">
@@ -641,6 +680,31 @@ export function AdminClassroomsContent({
               className={cn("rounded-xl bg-red-600 hover:bg-red-700")}
             >
               {submitting ? "Deleting..." : "Delete permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modal === "delete-classroom"} onOpenChange={(open) => !open && closeModal()}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Delete classroom</DialogTitle>
+            <DialogDescription>
+              Delete {selectedClassroom?.name}? Students in this classroom will be unassigned, not
+              deleted. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeModal} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteClassroom}
+              disabled={submitting}
+              className={cn("rounded-xl bg-red-600 hover:bg-red-700")}
+            >
+              {submitting ? "Deleting..." : "Delete classroom"}
             </Button>
           </DialogFooter>
         </DialogContent>
