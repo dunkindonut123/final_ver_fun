@@ -9,10 +9,8 @@ export type AssignmentALevel = "A1" | "A2" | "A3"
 
 const ASSIGNMENT_A_LEVELS: AssignmentALevel[] = ["A1", "A2", "A3"]
 
-/** Punctuation/symbols/spaces that are pre-filled; students only type hanzi. */
+/** Punctuation/symbols/spaces that are pre-filled; students only type the rest. */
 const ANSWER_STOPWORD_PATTERN = /[\s\p{P}\p{S}]/u
-/** Characters students are expected to type into answer slots. */
-const HAN_CHAR_PATTERN = /\p{Script=Han}/u
 
 export function isAssignmentALevel(value: string): value is AssignmentALevel {
 	return ASSIGNMENT_A_LEVELS.includes(value as AssignmentALevel)
@@ -26,17 +24,20 @@ export function getAnswerCharacters(answer: string): string[] {
 	return Array.from(answer)
 }
 
-/** Hanzi-only portion of an answer key (stopwords removed). */
+/** Answer-key characters students must type (stopwords removed). */
 export function stripAnswerStopwords(answer: string): string {
 	return getAnswerCharacters(answer)
 		.filter((char) => !isAnswerStopword(char))
 		.join("")
 }
 
-/** Keep only Han characters the student is expected to type. */
+/**
+ * Strip pre-filled stopwords from student input.
+ * Keeps hanzi, Latin letters, digits, etc. so English and IME pinyin both work.
+ */
 export function filterStudentHanziInput(value: string): string {
 	return getAnswerCharacters(value)
-		.filter((char) => HAN_CHAR_PATTERN.test(char))
+		.filter((char) => !isAnswerStopword(char))
 		.join("")
 }
 

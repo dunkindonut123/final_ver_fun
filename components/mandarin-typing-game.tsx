@@ -17,6 +17,7 @@ import {
   type AssignmentALevel,
   type MandarinTypingQuestion,
 } from "@/lib/mandarin-typing-questions"
+import { playCorrectBell, playWrongBuzz } from "@/lib/answer-sounds"
 import { QuestionsUnavailable } from "@/components/student/questions-unavailable"
 
 type GameState = "playing" | "finished"
@@ -216,8 +217,11 @@ export function MandarinTypingGame({
     setAnswerSubmitted(true)
 
     if (isCorrect) {
+      playCorrectBell()
       scoreRef.current += 1
       setScore(scoreRef.current)
+    } else {
+      playWrongBuzz()
     }
   }
 
