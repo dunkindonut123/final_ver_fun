@@ -10,6 +10,10 @@ import {
   scoreToCompletedAssignments,
 } from "@/lib/assignment-progress"
 import {
+  filterStudentHanziInput,
+  getAnswerSlotDisplays,
+  reconstructAnswerFromHanzi,
+  stripAnswerStopwords,
   type AssignmentALevel,
   type MandarinTypingQuestion,
 } from "@/lib/mandarin-typing-questions"
@@ -25,10 +29,6 @@ interface MandarinTypingGameProps {
   studentAssignmentId?: string
   returnHref?: string
   initialQuestions?: MandarinTypingQuestion[]
-}
-
-function normalizeInput(value: string) {
-  return value.replace(/\s+/g, "")
 }
 
 function completedCountForAssignment(assignmentLevel: AssignmentALevel) {
@@ -68,7 +68,17 @@ export function MandarinTypingGame({
     return ((currentQuestionIndex + 1) / totalQuestions) * 100
   }, [currentQuestionIndex, gameState, totalQuestions])
 
-  const answerLength = currentQuestion?.answer.length ?? 0
+  const answerSlots = useMemo(
+    () =>
+      currentQuestion
+        ? getAnswerSlotDisplays(currentQuestion.answer, inputValue)
+        : [],
+    [currentQuestion, inputValue]
+  )
+  const answerLength = answerSlots.length
+  const expectedHanziLength = currentQuestion
+    ? stripAnswerStopwords(currentQuestion.answer).length
+    : 0
 
   const playPronunciation = useCallback((text: string) => {
     if (typeof window === "undefined" || !text) {
@@ -122,7 +132,9 @@ export function MandarinTypingGame({
       return
     }
 
-    const isCorrect = normalizeInput(inputValue) === currentQuestion.answer
+    const isCorrect =
+      reconstructAnswerFromHanzi(currentQuestion.answer, inputValue) ===
+      currentQuestion.answer
 
     setLastAnswerCorrect(isCorrect)
     setAnswerSubmitted(true)
@@ -377,19 +389,25 @@ export function MandarinTypingGame({
           className="grid gap-3 justify-center"
           style={{ gridTemplateColumns: `repeat(${Math.max(answerLength, 1)}, minmax(0, 56px))` }}
         >
-          {Array.from({ length: answerLength }).map((_, index) => {
-            const char = inputValue[index] ?? ""
-            return (
-              <button
-                key={`slot-${index}`}
-                type="button"
-                onClick={() => inputRef.current?.focus()}
-                className="h-20 w-14 md:w-16 rounded-xl border-2 border-border bg-background text-4xl font-semibold text-foreground flex items-center justify-center"
-              >
-                {char || ""}
-              </button>
-            )
-          })}
+          {answerSlots.map((slot, index) => (
+            <button
+              key={`slot-${index}`}
+              type="button"
+              onClick={() => inputRef.current?.focus()}
+              aria-label={
+                slot.isStopword
+                  ? `Punctuation ${slot.char}`
+                  : `Hanzi slot ${index + 1}`
+              }
+              className={`h-20 w-14 md:w-16 rounded-xl border-2 text-4xl font-semibold flex items-center justify-center ${
+                slot.isStopword
+                  ? "border-muted-foreground/30 bg-muted text-muted-foreground"
+                  : "border-border bg-background text-foreground"
+              }`}
+            >
+              {slot.char || ""}
+            </button>
+          ))}
         </div>
 
         <div className="space-y-4">
@@ -399,7 +417,12 @@ export function MandarinTypingGame({
             value={inputValue}
             onChange={(event) => {
               if (answerSubmitted) return
-              setInputValue(event.target.value)
+              const filtered = filterStudentHanziInput(event.target.value)
+              setInputValue(
+                expectedHanziLength > 0
+                  ? filtered.slice(0, expectedHanziLength)
+                  : filtered
+              )
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -411,6 +434,7 @@ export function MandarinTypingGame({
                 }
               }
             }}
+            maxLength={expectedHanziLength > 0 ? expectedHanziLength : undefined}
             className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg text-center text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Enter Hanzi Here"
             autoFocus
