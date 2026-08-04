@@ -37,6 +37,52 @@ function completedCountForAssignment(assignmentLevel: AssignmentALevel) {
   return 3
 }
 
+function normalizeVoiceLang(lang: string) {
+  return lang.toLowerCase().replace(/_/g, "-")
+}
+
+/** Prefer higher-quality Mainland Mandarin voices when the browser provides them. */
+function pickFluentMandarinVoice(
+  voices: SpeechSynthesisVoice[]
+): SpeechSynthesisVoice | undefined {
+  const mandarinVoices = voices.filter((voice) => {
+    const lang = normalizeVoiceLang(voice.lang)
+    return (
+      lang === "zh-cn" ||
+      lang === "zh" ||
+      lang.startsWith("zh-cn") ||
+      lang.startsWith("cmn")
+    )
+  })
+
+  const preferredNames = [
+    "google",
+    "neural",
+    "premium",
+    "enhanced",
+    "xiaoxiao",
+    "xiaoyi",
+    "yunxi",
+    "yunyang",
+    "tingting",
+    "ting-ting",
+    "meijia",
+    "mei-jia",
+  ]
+
+  const preferred = mandarinVoices.find((voice) => {
+    const name = voice.name.toLowerCase()
+    return preferredNames.some((token) => name.includes(token))
+  })
+
+  return (
+    preferred ??
+    mandarinVoices.find((voice) => normalizeVoiceLang(voice.lang).startsWith("zh-cn")) ??
+    mandarinVoices[0] ??
+    voices.find((voice) => normalizeVoiceLang(voice.lang).startsWith("zh"))
+  )
+}
+
 export function MandarinTypingGame({
   hskLevel,
   assignmentLevel,
@@ -59,6 +105,7 @@ export function MandarinTypingGame({
   const inputRef = useRef<HTMLInputElement>(null)
   const scoreRef = useRef(0)
   const lastAutoPlayedKeyRef = useRef<string | null>(null)
+  const isComposingRef = useRef(false)
   const [autoPlayNonce, setAutoPlayNonce] = useState(0)
 
   const currentQuestion = questions[currentQuestionIndex]
@@ -80,25 +127,54 @@ export function MandarinTypingGame({
     ? stripAnswerStopwords(currentQuestion.answer).length
     : 0
 
+  const commitHanziInput = useCallback(
+    (rawValue: string) => {
+      const filtered = filterStudentHanziInput(rawValue)
+      setInputValue(
+        expectedHanziLength > 0
+          ? Array.from(filtered).slice(0, expectedHanziLength).join("")
+          : filtered
+      )
+    },
+    [expectedHanziLength]
+  )
+
   const playPronunciation = useCallback((text: string) => {
     if (typeof window === "undefined" || !text) {
       return
     }
 
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = "zh-CN"
-    utterance.rate = 0.85
+    const speak = (voices: SpeechSynthesisVoice[]) => {
+      window.speechSynthesis.cancel()
 
-    const voices = window.speechSynthesis.getVoices()
-    const chineseVoice =
-      voices.find((voice) => voice.lang === "zh-CN") ??
-      voices.find((voice) => voice.lang.toLowerCase().startsWith("zh"))
-    if (chineseVoice) {
-      utterance.voice = chineseVoice
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = "zh-CN"
+      // Slower than default so tones and syllables stay clear for learners.
+      utterance.rate = 0.7
+      utterance.pitch = 1
+      utterance.volume = 1
+
+      const chineseVoice = pickFluentMandarinVoice(voices)
+      if (chineseVoice) {
+        utterance.voice = chineseVoice
+        utterance.lang = chineseVoice.lang
+      }
+
+      window.speechSynthesis.speak(utterance)
     }
 
-    window.speechSynthesis.speak(utterance)
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      speak(voices)
+      return
+    }
+
+    // Chrome often loads voices asynchronously on first use.
+    const onVoicesChanged = () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged)
+      speak(window.speechSynthesis.getVoices())
+    }
+    window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged)
   }, [])
 
   const handlePlayHint = () => {
@@ -417,14 +493,26 @@ export function MandarinTypingGame({
             value={inputValue}
             onChange={(event) => {
               if (answerSubmitted) return
-              const filtered = filterStudentHanziInput(event.target.value)
-              setInputValue(
-                expectedHanziLength > 0
-                  ? filtered.slice(0, expectedHanziLength)
-                  : filtered
-              )
+              // Don't reshape the value while an IME (e.g. Pinyin) is composing.
+              const nativeEvent = event.nativeEvent as InputEvent
+              if (isComposingRef.current || nativeEvent.isComposing) {
+                setInputValue(event.target.value)
+                return
+              }
+              commitHanziInput(event.target.value)
+            }}
+            onCompositionStart={() => {
+              isComposingRef.current = true
+            }}
+            onCompositionEnd={(event) => {
+              isComposingRef.current = false
+              if (answerSubmitted) return
+              commitHanziInput(event.currentTarget.value)
             }}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing || event.key === "Process") {
+                return
+              }
               if (event.key === "Enter") {
                 event.preventDefault()
                 if (answerSubmitted) {
@@ -434,7 +522,6 @@ export function MandarinTypingGame({
                 }
               }
             }}
-            maxLength={expectedHanziLength > 0 ? expectedHanziLength : undefined}
             className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg text-center text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Enter Hanzi Here"
             autoFocus

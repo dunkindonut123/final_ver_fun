@@ -11,6 +11,8 @@ const ASSIGNMENT_A_LEVELS: AssignmentALevel[] = ["A1", "A2", "A3"]
 
 /** Punctuation/symbols/spaces that are pre-filled; students only type hanzi. */
 const ANSWER_STOPWORD_PATTERN = /[\s\p{P}\p{S}]/u
+/** Characters students are expected to type into answer slots. */
+const HAN_CHAR_PATTERN = /\p{Script=Han}/u
 
 export function isAssignmentALevel(value: string): value is AssignmentALevel {
 	return ASSIGNMENT_A_LEVELS.includes(value as AssignmentALevel)
@@ -31,10 +33,10 @@ export function stripAnswerStopwords(answer: string): string {
 		.join("")
 }
 
-/** Keep only characters the student is expected to type. */
+/** Keep only Han characters the student is expected to type. */
 export function filterStudentHanziInput(value: string): string {
 	return getAnswerCharacters(value)
-		.filter((char) => !isAnswerStopword(char))
+		.filter((char) => HAN_CHAR_PATTERN.test(char))
 		.join("")
 }
 
