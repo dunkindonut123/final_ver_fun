@@ -177,6 +177,7 @@ Key development files:
 
 ## 📚 Learn More
 
+- [Mobile UX plan](docs/mobile-ux-plan.md) — phone layout phases and how to test on a real device
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Tailwind CSS](https://tailwindcss.com)

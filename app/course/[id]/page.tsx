@@ -27,8 +27,8 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#1e5fa8]/10 to-[#f9a825]/10 py-8 border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-gradient-to-r from-[#1e5fa8]/10 to-[#f9a825]/10 py-6 sm:py-8 border-b border-border">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
           <Link href="/#courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="w-4 h-4" />
             Kembali ke Kursus
@@ -38,8 +38,8 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
               <span className="text-sm font-semibold text-white px-3 py-1 rounded-full" style={{ backgroundColor: course.accent }}>
                 {course.badge}
               </span>
-              <h1 className="text-4xl font-bold text-foreground mt-4">{course.title}</h1>
-              <p className="text-muted-foreground mt-2">{course.subtitle}</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-foreground mt-4">{course.title}</h1>
+              <p className="text-muted-foreground mt-2 text-sm sm:text-base">{course.subtitle}</p>
             </div>
             <div className="text-right">
               
@@ -50,25 +50,25 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid md:grid-cols-3 gap-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
           {/* Main Content */}
-          <div className="md:col-span-2 space-y-8">
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card rounded-lg p-4 border border-border text-center">
+          <div className="md:col-span-2 space-y-6 sm:space-y-8">
+            {/* Stats — stack on phone so cells stay readable */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+              <div className="bg-card rounded-lg p-3 sm:p-4 border border-border text-center">
                 <Clock className="w-5 h-5 mx-auto text-primary mb-2" />
-                <div className="text-2xl font-bold text-foreground">{course.hours}</div>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{course.hours}</div>
                 <div className="text-xs text-muted-foreground">Bulan Pelajaran</div>
               </div>
-              <div className="bg-card rounded-lg p-4 border border-border text-center">
+              <div className="bg-card rounded-lg p-3 sm:p-4 border border-border text-center">
                 <Users className="w-5 h-5 mx-auto text-primary mb-2" />
-                <div className="text-2xl font-bold text-foreground">{course.students}</div>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{course.students}</div>
                 <div className="text-xs text-muted-foreground">Siswa Aktif</div>
               </div>
-              <div className="bg-card rounded-lg p-4 border border-border text-center">
+              <div className="bg-card rounded-lg p-3 sm:p-4 border border-border text-center">
                 <Star className="w-5 h-5 mx-auto text-primary mb-2" />
-                <div className="text-2xl font-bold text-foreground">{course.rating}</div>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{course.rating}</div>
                 <div className="text-xs text-muted-foreground">Rating</div>
               </div>
             </div>

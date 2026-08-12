@@ -200,10 +200,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       {/* Header - Slick & Modern */}
-      <header className="fixed top-0 left-0 right-0 z-50">
-        <div className="mx-4 mt-3">
-          <div className="max-w-6xl mx-auto bg-background/60 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg shadow-foreground/5">
-            <div className="flex items-center justify-between h-17 px-3 sm:px-4 lg:px-6 gap-2 lg:gap-3 overflow-hidden">
+      <header className="fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)]">
+        <div className="mx-0 mt-0 sm:mx-4 sm:mt-3">
+          <div className="max-w-6xl mx-auto bg-background/80 sm:bg-background/60 backdrop-blur-2xl rounded-none sm:rounded-2xl border-0 border-b border-white/20 sm:border shadow-sm sm:shadow-lg shadow-foreground/5">
+            {/* overflow-visible so the mobile menu panel is not clipped under the page */}
+            <div className="flex items-center justify-between h-17 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-4 lg:px-6 gap-2 lg:gap-3">
               {/* Logo */}
 
               <FunMandarinLogo className="h-16 lg:h-20 xl:h-24 w-auto shrink-0" />
@@ -226,16 +227,15 @@ export default function Home() {
               </nav>
 
               {/* Mobile Menu Button */}
-              <details className="md:hidden relative shrink-0">
+              <details className="md:hidden relative z-[60] shrink-0">
                 <summary className="list-none p-2 hover:bg-foreground/10 rounded-xl transition-colors cursor-pointer" aria-label="Toggle menu">
                   <Menu className="h-5 w-5" />
                 </summary>
 
-                <div className="absolute right-0 mt-2 w-56 bg-background/95 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg p-4 space-y-1">
+                <div className="absolute right-0 mt-2 w-56 z-[60] bg-background/95 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg p-4 space-y-1">
                   {[
                     { label: "Kursus", href: "#courses" },
                     { label: "Tentang", href: "#about" },
-                    { label: "Berkompetisi", href: "#games" },
                     { label: "Komunitas", href: "#testimonials" },
                   ].map((item) => (
                     <a
@@ -278,7 +278,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section - Modern & Clean */}
-      <section className="relative pt-28 pb-20 lg:pt-36 lg:pb-28 overflow-hidden">
+      <section className="relative pt-[calc(7rem+env(safe-area-inset-top))] pb-20 sm:pt-28 lg:pt-36 lg:pb-28 overflow-hidden">
         {/* Background decorations */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#1e5fa8]/5 rounded-full blur-3xl" />

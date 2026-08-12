@@ -95,17 +95,17 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border bg-gradient-to-r from-[#1e5fa8]/5 via-background to-[#f9a825]/5 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="rounded-2xl border border-border bg-gradient-to-r from-[#1e5fa8]/5 via-background to-[#f9a825]/5 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Assignment for</p>
-            <h2 className="text-2xl font-bold text-foreground">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
               {chapterInfo.hskLevel !== null && chapterInfo.chapterNumber !== null
                 ? `HSK ${chapterInfo.hskLevel} - Chapter ${chapterInfo.chapterNumber}`
                 : chapterId}
             </h2>
           </div>
-          <Badge className="rounded-full bg-[#1e5fa8] text-white">
+          <Badge className="w-fit rounded-full bg-[#1e5fa8] text-white">
             {summary.completedCount}/{summary.totalCount} assignments complete
           </Badge>
         </div>
@@ -165,7 +165,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
                       href={`/typing-hanzi?hsk=${chapterInfo.hskLevel ?? 1}&assignment=A${levelNumber}&chapterId=${encodeURIComponent(
                         chapterId
                       )}`}
-                      className={`inline-flex items-center justify-center gap-2 min-w-[180px] rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                      className={`inline-flex w-full sm:w-auto min-h-11 items-center justify-center gap-2 sm:min-w-[180px] rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
                         step.isCompleted
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-primary text-primary-foreground"
@@ -184,7 +184,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
                     <Button
                       type="button"
                       disabled
-                      className="min-w-[180px] rounded-xl"
+                      className="w-full sm:w-auto min-h-11 sm:min-w-[180px] rounded-xl"
                       variant="secondary"
                     >
                       <Lock className="mr-2 h-4 w-4" />
@@ -232,7 +232,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
                 role="button"
                 onClick={() => router.push(`/assignment/${chapterId}/exercise?assignment=B`)}
                 href={`/assignment/${chapterId}/exercise?assignment=B`}
-                className="inline-flex items-center justify-center gap-2 min-w-[180px] rounded-xl px-4 py-2 text-sm font-medium transition-colors bg-primary text-primary-foreground"
+                className="inline-flex w-full sm:w-auto min-h-11 items-center justify-center gap-2 sm:min-w-[180px] rounded-xl px-4 py-2.5 text-sm font-medium transition-colors bg-primary text-primary-foreground"
               >
                 {stepStates[3]?.isCompleted ? (
                   <>
@@ -247,7 +247,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
               <Button
                 type="button"
                 disabled
-                className="min-w-[180px] rounded-xl"
+                className="w-full sm:w-auto min-h-11 sm:min-w-[180px] rounded-xl"
                 variant="secondary"
               >
                 <Lock className="mr-2 h-4 w-4" />

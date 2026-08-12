@@ -43,7 +43,7 @@ export function AssignmentRetryButton({ studentAssignmentId }: AssignmentRetryBu
       <Button
         type="button"
         variant="outline"
-        className="rounded-xl"
+        className="w-full sm:w-auto min-h-11 rounded-xl"
         onClick={handleRetry}
         disabled={loading}
       >

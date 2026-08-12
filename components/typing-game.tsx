@@ -5,6 +5,7 @@ import Link from "next/link"
 
 import type React from "react"
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
+import { useStableKeyboardViewport } from "@/lib/use-stable-keyboard-viewport"
 
 type WordStatus = "pending" | "current" | "correct" | "incorrect"
 
@@ -41,10 +42,10 @@ const WordTile = memo(function WordTile({ wordState, index }: WordTileProps) {
   return (
     <div
       key={`${wordState.word}-${index}`}
-      className={`flex items-center justify-center ${wordState.word.length >= 4 ? "min-h-16 col-span-1" : "min-h-12"}`}
+      className={`flex items-center justify-center ${wordState.word.length >= 4 ? "min-h-12 sm:min-h-16 col-span-1" : "min-h-10 sm:min-h-12"}`}
     >
       <span
-        className={`w-full h-full px-2 py-2 rounded transition-all font-semibold line-clamp-1 flex items-center justify-center text-2xl ${
+        className={`w-full h-full px-1.5 sm:px-2 py-1.5 sm:py-2 rounded transition-all font-semibold line-clamp-1 flex items-center justify-center text-base sm:text-xl md:text-2xl ${
           wordState.status === "current"
             ? "bg-primary/30 text-primary border-2 border-primary font-bold"
             : wordState.status === "correct"
@@ -82,6 +83,14 @@ export function TypingGame({
   const inputRef = useRef<HTMLInputElement>(null)
   const finishedNotifiedRef = useRef(false)
   const poolCursorRef = useRef(0)
+
+  useStableKeyboardViewport(gameState !== "finished")
+
+  useEffect(() => {
+    if (gameState === "finished") return
+    inputRef.current?.focus({ preventScroll: true })
+  }, [gameState, currentIndex])
+
   const visibleWords = useMemo(() => words.slice(0, VISIBLE_WORD_COUNT), [words])
   const formattedTime = useMemo(() => {
     const mins = Math.floor(timeLeft / 60)
@@ -253,17 +262,17 @@ export function TypingGame({
 
   if (gameState === "finished") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="text-center space-y-8 max-w-md">
-          <h2 className="text-3xl font-bold text-foreground">Hasil</h2>
+      <div className="fixed inset-0 z-10 overflow-y-auto overscroll-none bg-background flex flex-col items-start sm:items-center justify-center p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-4">
+        <div className="text-center space-y-6 sm:space-y-8 max-w-md w-full px-1 sm:px-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Hasil</h2>
           
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-1 p-4 bg-card rounded-xl border border-border">
-              <div className="text-5xl font-bold text-primary">{wpm}</div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-6">
+            <div className="space-y-1 p-3 sm:p-4 bg-card rounded-xl border border-border">
+              <div className="text-4xl sm:text-5xl font-bold text-primary">{wpm}</div>
               <div className="text-sm text-muted-foreground uppercase tracking-wider">KPM</div>
             </div>
-            <div className="space-y-1 p-4 bg-card rounded-xl border border-border">
-              <div className="text-5xl font-bold text-primary">{accuracy}%</div>
+            <div className="space-y-1 p-3 sm:p-4 bg-card rounded-xl border border-border">
+              <div className="text-4xl sm:text-5xl font-bold text-primary">{accuracy}%</div>
               <div className="text-sm text-muted-foreground uppercase tracking-wider">Akurasi</div>
             </div>
           </div>
@@ -295,26 +304,26 @@ export function TypingGame({
             </p>
           ) : null}
 
-          <div className="flex items-center justify-center gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-4">
             {returnHref ? (
               <Link
                 href={returnHref}
                 aria-disabled={saveState === "saving"}
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-foreground hover:border-primary hover:text-primary transition-colors ${
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors ${
                   saveState === "saving" ? "pointer-events-none opacity-50" : ""
                 }`}
               >
-                <Home className="w-5 h-5" />
-                <span>Back to chapter</span>
+                <Home className="h-4 w-4" />
+                Return to Dashboard
               </Link>
             ) : null}
             <button
               onClick={initializeGame}
               disabled={saveState === "saving"}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              <RotateCcw className="w-5 h-5" />
-              <span>Coba Lagi</span>
+              <RotateCcw className="h-4 w-4" />
+              Coba Lagi
             </button>
           </div>
         </div>
@@ -323,28 +332,37 @@ export function TypingGame({
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-5xl space-y-6">
+    <div className="fixed inset-0 z-10 overflow-y-auto overscroll-none bg-background flex flex-col items-start sm:items-center justify-start sm:justify-center p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-4">
+      <div className="w-full max-w-5xl space-y-3 sm:space-y-6">
+        {returnHref ? (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <Link
+              href={returnHref}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
+            >
+              <Home className="h-4 w-4" />
+              Return to Dashboard
+            </Link>
+          </div>
+        ) : null}
+
         {/* Timer */}
         <div className="text-center">
-          <div className="text-4xl font-bold text-primary tabular-nums">
+          <div className="text-2xl sm:text-4xl font-bold text-primary tabular-nums">
             {formattedTime}
           </div>
         </div>
 
         {/* Instructions - Only on Idle */}
         {gameState === "idle" && (
-          <>
-            
-            <p className="text-center text-muted-foreground text-sm animate-pulse">
-              Type to start...
-            </p>
-          </>
+          <p className="text-center text-muted-foreground text-sm animate-pulse">
+            Type to start...
+          </p>
         )}
 
-        {/* Words Display - 2 rows of 9 */}
-        <div className="relative overflow-hidden bg-card/50 rounded-lg p-4 border border-border tracking-widest">
-          <div className="grid grid-cols-9 gap-0 auto-rows-max">
+        {/* Cap board height on phone so the input stays reachable above the keyboard */}
+        <div className="relative max-h-[32vh] sm:max-h-none overflow-y-auto overscroll-contain bg-card/50 rounded-lg p-2 sm:p-4 border border-border tracking-wide sm:tracking-widest">
+          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-0 auto-rows-max">
             {visibleWords.map((wordState, index) => (
               <WordTile key={`${wordState.word}-${index}`} wordState={wordState} index={index} />
             ))}
@@ -359,32 +377,34 @@ export function TypingGame({
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            className="w-full max-w-md px-5 py-4 text-2xl text-center bg-card border-2 border-border rounded-lg focus:outline-none focus:border-primary text-foreground font-semibold"
+            className="w-full max-w-md min-h-12 px-4 sm:px-5 py-3 sm:py-4 text-xl sm:text-2xl text-center bg-card border-2 border-border rounded-lg focus:outline-none focus:border-primary text-foreground font-semibold"
             placeholder="Answer here..."
-            autoFocus
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
+            onFocus={() => {
+              window.scrollTo(0, 0)
+            }}
           />
         </div>
 
         {/* Live Stats - Only show during playing */}
         {gameState === "playing" && (
-          <div className="flex justify-center gap-12 text-base text-muted-foreground font-semibold">
-            <span>KPM: <span className="text-primary text-lg">{wpm}</span></span>
-            <span>Akurasi: <span className="text-primary text-lg">{accuracy}%</span></span>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 sm:gap-12 text-sm sm:text-base text-muted-foreground font-semibold">
+            <span>KPM: <span className="text-primary text-base sm:text-lg">{wpm}</span></span>
+            <span>Akurasi: <span className="text-primary text-base sm:text-lg">{accuracy}%</span></span>
           </div>
         )}
 
         {/* Restart Button */}
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-1 sm:pt-4">
           <button
             onClick={(e) => {
               e.stopPropagation()
               initializeGame()
             }}
-            className="text-muted-foreground hover:text-primary transition-colors p-2"
+            className="text-muted-foreground hover:text-primary transition-colors p-2 min-h-10 min-w-10 inline-flex items-center justify-center"
             title="Restart"
           >
             <RotateCcw className="w-5 h-5" />

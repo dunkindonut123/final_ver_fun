@@ -19,6 +19,7 @@ import {
 } from "@/lib/mandarin-typing-questions"
 import { playCorrectBell, playWrongBuzz } from "@/lib/answer-sounds"
 import { QuestionsUnavailable } from "@/components/student/questions-unavailable"
+import { useStableKeyboardViewport } from "@/lib/use-stable-keyboard-viewport"
 
 type GameState = "playing" | "finished"
 type SaveState = "idle" | "saving" | "saved" | "error"
@@ -109,6 +110,9 @@ export function MandarinTypingGame({
   const isComposingRef = useRef(false)
   const [autoPlayNonce, setAutoPlayNonce] = useState(0)
 
+  // Keep assignment UI from jumping when the mobile keyboard opens.
+  useStableKeyboardViewport(true)
+
   const currentQuestion = questions[currentQuestionIndex]
 
   const progressValue = useMemo(() => {
@@ -123,7 +127,6 @@ export function MandarinTypingGame({
         : [],
     [currentQuestion, inputValue]
   )
-  const answerLength = answerSlots.length
   const expectedHanziLength = currentQuestion
     ? stripAnswerStopwords(currentQuestion.answer).length
     : 0
@@ -151,7 +154,7 @@ export function MandarinTypingGame({
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = "zh-CN"
       // Slower than default so tones and syllables stay clear for learners.
-      utterance.rate = 0.7
+      utterance.rate = 0.3
       utterance.pitch = 1
       utterance.volume = 1
 
@@ -204,6 +207,11 @@ export function MandarinTypingGame({
     playPronunciation(question.answer)
   }, [autoPlayNonce, currentQuestionIndex, gameState, playPronunciation, questions])
 
+  useEffect(() => {
+    if (gameState !== "playing") return
+    inputRef.current?.focus({ preventScroll: true })
+  }, [currentQuestionIndex, gameState])
+
   const handleSubmit = () => {
     if (!currentQuestion || answerSubmitted) {
       return
@@ -238,7 +246,7 @@ export function MandarinTypingGame({
     setInputValue("")
     setAnswerSubmitted(false)
     setLastAnswerCorrect(null)
-    inputRef.current?.focus()
+    inputRef.current?.focus({ preventScroll: true })
   }
 
   const restartGame = () => {
@@ -253,7 +261,7 @@ export function MandarinTypingGame({
     setSaveState("idle")
     setSaveMessage(null)
     setAutoPlayNonce((prev) => prev + 1)
-    inputRef.current?.focus()
+    inputRef.current?.focus({ preventScroll: true })
   }
 
   const persistAssignmentCompletion = useCallback(async (finalCorrectCount?: number) => {
@@ -372,20 +380,20 @@ export function MandarinTypingGame({
       totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
 
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center p-4">
-        <section className="w-full max-w-2xl rounded-3xl border border-border bg-card p-8 text-center shadow-sm space-y-6">
-          <h1 className="text-3xl font-bold text-foreground">Assignment Completed</h1>
+      <main className="fixed inset-0 z-10 overflow-y-auto overscroll-none bg-background flex items-start md:items-center justify-center p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-4">
+        <section className="w-full max-w-2xl rounded-none sm:rounded-3xl border-0 sm:border border-border bg-card p-4 sm:p-8 text-center shadow-none sm:shadow-sm space-y-5 sm:space-y-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Assignment Completed</h1>
           <p className="text-muted-foreground">Final Score</p>
 
-          <div className="mx-auto flex w-fit items-stretch gap-4">
-            <div className="rounded-2xl border border-border bg-background px-10 py-6 text-center">
-              <p className="text-5xl font-bold text-primary">
+          <div className="mx-auto flex w-full max-w-md flex-col sm:flex-row sm:w-fit items-stretch gap-3 sm:gap-4">
+            <div className="flex-1 rounded-2xl border border-border bg-background px-6 py-5 sm:px-10 sm:py-6 text-center">
+              <p className="text-4xl sm:text-5xl font-bold text-primary">
                 {score}/{totalQuestions}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">Correct Answers</p>
             </div>
-            <div className="rounded-2xl border border-border bg-background px-10 py-6 text-center">
-              <p className="text-5xl font-bold text-primary">{scorePercent}%</p>
+            <div className="flex-1 rounded-2xl border border-border bg-background px-6 py-5 sm:px-10 sm:py-6 text-center">
+              <p className="text-4xl sm:text-5xl font-bold text-primary">{scorePercent}%</p>
               <p className="mt-2 text-sm text-muted-foreground">Score</p>
             </div>
           </div>
@@ -396,16 +404,16 @@ export function MandarinTypingGame({
             </p>
           )}
 
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
             {saveState === "saving" ? (
-              <span className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground opacity-70">
+              <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground opacity-70">
                 <Home className="h-4 w-4" />
                 Saving progress...
               </span>
             ) : (
               <Link
                 href={returnHref}
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
               >
                 <Home className="h-4 w-4" />
                 Dashboard
@@ -413,7 +421,7 @@ export function MandarinTypingGame({
             )}
             <button
               onClick={restartGame}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <RotateCcw className="h-4 w-4" />
               Retry
@@ -425,12 +433,12 @@ export function MandarinTypingGame({
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <section className="w-full max-w-4xl rounded-3xl border border-border bg-card px-6 py-8 md:px-10 md:py-10 shadow-sm space-y-8">
+    <main className="fixed inset-0 z-10 overflow-y-auto overscroll-none bg-background flex items-start md:items-center justify-center p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-4">
+      <section className="w-full max-w-4xl rounded-none sm:rounded-3xl border-0 sm:border border-border bg-card px-3 py-4 sm:px-6 sm:py-8 md:px-10 md:py-10 shadow-none sm:shadow-sm space-y-4 sm:space-y-6 md:space-y-8">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <Link
             href={returnHref}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
           >
             <Home className="h-4 w-4" />
             Return to Dashboard
@@ -438,9 +446,9 @@ export function MandarinTypingGame({
           <p className="text-sm text-muted-foreground font-medium">HSK {hskLevel} - {assignmentLevel}</p>
         </div>
 
-        <div className="space-y-3">
-          <div className="h-16 w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md flex items-center justify-center">
-            <span className="text-3xl font-bold text-white tracking-wide">
+        <div className="space-y-2 sm:space-y-3">
+          <div className="h-12 sm:h-16 w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md flex items-center justify-center">
+            <span className="text-2xl sm:text-3xl font-bold text-white tracking-wide">
               {currentQuestionIndex + 1}/{totalQuestions}
             </span>
           </div>
@@ -453,33 +461,33 @@ export function MandarinTypingGame({
           </div>
         </div>
 
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-foreground">{currentQuestion.meaningHintId}</h1>
+        <div className="text-center space-y-3 sm:space-y-4">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-foreground break-words">
+            {currentQuestion.meaningHintId}
+          </h1>
           <button
             type="button"
             onClick={handlePlayHint}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-base text-foreground hover:border-primary hover:text-primary transition-colors"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-base text-foreground hover:border-primary hover:text-primary transition-colors"
           >
             <Volume2 className="h-4 w-4" />
             Hear Pronunciation
           </button>
         </div>
 
-        <div
-          className="grid gap-3 justify-center"
-          style={{ gridTemplateColumns: `repeat(${Math.max(answerLength, 1)}, minmax(0, 56px))` }}
-        >
+        {/* Flex-wrap keeps slot size readable; long answers wrap instead of crushing */}
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
           {answerSlots.map((slot, index) => (
             <button
               key={`slot-${index}`}
               type="button"
-              onClick={() => inputRef.current?.focus()}
+              onClick={() => inputRef.current?.focus({ preventScroll: true })}
               aria-label={
                 slot.isStopword
                   ? `Punctuation ${slot.char}`
                   : `Hanzi slot ${index + 1}`
               }
-              className={`h-20 w-14 md:w-16 rounded-xl border-2 text-4xl font-semibold flex items-center justify-center ${
+              className={`h-14 w-11 sm:h-20 sm:w-14 md:w-16 shrink-0 rounded-xl border-2 text-2xl sm:text-4xl font-semibold flex items-center justify-center ${
                 slot.isStopword
                   ? "border-muted-foreground/30 bg-muted text-muted-foreground"
                   : "border-border bg-background text-foreground"
@@ -490,7 +498,7 @@ export function MandarinTypingGame({
           ))}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <input
             ref={inputRef}
             type="text"
@@ -526,18 +534,20 @@ export function MandarinTypingGame({
                 }
               }
             }}
-            className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg text-center text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full min-h-12 rounded-lg border border-border bg-background px-4 py-3 text-lg text-center text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Enter Hanzi Here"
-            autoFocus
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
+            onFocus={() => {
+              window.scrollTo(0, 0)
+            }}
           />
 
           {answerSubmitted && (
             <div
-              className={`rounded-lg px-4 py-3 text-sm font-medium text-center ${
+              className={`rounded-lg px-4 py-3 text-sm font-medium text-center break-words ${
                 lastAnswerCorrect
                   ? "bg-green-500/10 text-green-700 border border-green-500/30"
                   : "bg-red-500/10 text-red-700 border border-red-500/30"
@@ -554,7 +564,7 @@ export function MandarinTypingGame({
               <button
                 type="button"
                 onClick={goToNextQuestion}
-                className="rounded-lg bg-primary px-8 py-3 text-xl font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="w-full sm:w-auto min-h-12 rounded-lg bg-primary px-8 py-3 text-lg sm:text-xl font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 {currentQuestionIndex + 1 === totalQuestions ? "Lihat Skor" : "Soal Berikutnya"}
               </button>
@@ -562,7 +572,7 @@ export function MandarinTypingGame({
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="rounded-lg bg-emerald-500 px-8 py-3 text-xl font-semibold text-white hover:bg-emerald-600 transition-colors"
+                className="w-full sm:w-auto min-h-12 rounded-lg bg-emerald-500 px-8 py-3 text-lg sm:text-xl font-semibold text-white hover:bg-emerald-600 transition-colors"
               >
                 Submit Answer
               </button>

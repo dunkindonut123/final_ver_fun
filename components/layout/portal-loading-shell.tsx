@@ -20,14 +20,14 @@ export function PortalLoadingShell({
         <div className="absolute bottom-0 right-1/3 h-56 w-56 rounded-full bg-[#f9a825]/8 blur-3xl" />
       </div>
 
-      <header className="relative z-20 px-4 pt-3">
+      <header className="relative z-20 pt-[env(safe-area-inset-top)] sm:px-4 sm:pt-3">
         <div
           className={cn(
-            "mx-auto rounded-2xl border border-white/20 bg-background/60 shadow-lg shadow-foreground/5 backdrop-blur-2xl",
+            "mx-auto border-b border-white/20 bg-background/80 shadow-sm shadow-foreground/5 backdrop-blur-2xl sm:rounded-2xl sm:border sm:bg-background/60 sm:shadow-lg",
             maxWidth
           )}
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex items-center justify-between gap-3 py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:py-2.5">
             <div className="flex shrink-0 items-center gap-2">
               <div className="h-12 w-28 animate-pulse rounded-xl bg-muted lg:h-14 lg:w-32" />
               {portalLabel ? (
@@ -36,12 +36,19 @@ export function PortalLoadingShell({
                 </span>
               ) : null}
             </div>
-            <div className="h-9 w-24 animate-pulse rounded-xl bg-muted" />
+            <div className="h-9 w-10 animate-pulse rounded-xl bg-muted sm:w-24" />
           </div>
         </div>
       </header>
 
-      <main className={cn("relative z-10 mx-auto px-4 py-8", maxWidth)}>{children}</main>
+      <main
+        className={cn(
+          "relative z-10 mx-auto py-4 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-8",
+          maxWidth
+        )}
+      >
+        {children}
+      </main>
     </div>
   );
 }

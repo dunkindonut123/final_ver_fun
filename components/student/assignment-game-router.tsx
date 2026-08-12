@@ -7,7 +7,6 @@ import { isAssignmentALevel, type MandarinTypingQuestion } from "@/lib/mandarin-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuestionsUnavailable } from "@/components/student/questions-unavailable";
-import { ArrowLeft } from "lucide-react";
 
 const AssignmentBGame = dynamic(
   () => import("@/components/assignment-b-game").then((m) => m.AssignmentBGame),
@@ -30,7 +29,6 @@ export function AssignmentGameRouter({
   chapterId,
   hskLevel,
   assignmentKey,
-  assignmentTitle,
   isLocked,
   mandarinQuestions,
   assignmentBWords,
@@ -59,22 +57,12 @@ export function AssignmentGameRouter({
     }
 
     return (
-      <div>
-        <div className="border-b border-border bg-background px-4 py-3">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-            <Link href={returnHref} className="inline-flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              {assignmentTitle}
-            </Link>
-          </div>
-        </div>
-        <AssignmentBGame
-          chapterId={chapterId}
-          studentAssignmentId={studentAssignmentId}
-          initialWordPool={assignmentBWords}
-          returnHref={returnHref}
-        />
-      </div>
+      <AssignmentBGame
+        chapterId={chapterId}
+        studentAssignmentId={studentAssignmentId}
+        initialWordPool={assignmentBWords}
+        returnHref={returnHref}
+      />
     );
   }
 

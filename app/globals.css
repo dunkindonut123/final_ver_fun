@@ -39,16 +39,6 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.h-16 {
-  height: calc(var(--spacing) * 18);
-}
-.h-17 {
-  height: calc(var(--spacing) * 19);
-}
-.px-4 {
-    padding-inline: calc(var(--spacing) * 18);
-}
-
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -134,5 +124,19 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Shared safe-area helpers for notched phones (used by shells / games). */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-pad-x {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+  .safe-pad-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-pad-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
