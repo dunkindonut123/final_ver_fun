@@ -49,7 +49,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
 
   const chapterInfo = useMemo(() => parseChapterInfo(chapterId), [chapterId]);
   const summary = useMemo(
-    () => summaryFromChapterProgress(completedAssignments * 25),
+    () => summaryFromChapterProgress(completedAssignments * 20),
     [completedAssignments]
   );
   const isAssignmentBUnlocked = isAssignmentUnlocked("B", summary);
@@ -119,16 +119,16 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
           <div>
             <h3 className="text-lg font-semibold text-card-foreground">Assignment A</h3>
             <p className="text-sm text-muted-foreground">
-              Complete the three levels in sequence to unlock Assignment B.
+              Complete the four levels in sequence to unlock Assignment B.
             </p>
           </div>
           <Badge variant="secondary" className="rounded-full">
-            {summary.completedKeys.includes("A3") ? "B unlocked" : "B locked"}
+            {summary.completedKeys.includes("A4") ? "B unlocked" : "B locked"}
           </Badge>
         </div>
 
         <div className="grid gap-4">
-          {stepStates.slice(0, 3).map((step, index) => {
+          {stepStates.filter((step) => step.key !== "B").map((step, index) => {
             const levelNumber = index + 1;
 
             return (
@@ -203,7 +203,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
           <div>
             <h3 className="text-lg font-semibold text-card-foreground">Assignment B</h3>
             <p className="text-sm text-muted-foreground">
-              The final assignment unlocks only after all three Assignment A levels are complete.
+              The final assignment unlocks only after all four Assignment A levels are complete.
             </p>
           </div>
           <Badge
@@ -223,7 +223,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
               <p className="mt-1 text-sm text-muted-foreground">
                 {isAssignmentBUnlocked
                   ? "Open the final exercise placeholder for Assignment B."
-                  : "Complete Assignment A Level 3 to unlock this final task."}
+                  : "Complete Assignment A Level 4 to unlock this final task."}
               </p>
             </div>
 
@@ -234,7 +234,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
                 href={`/assignment/${chapterId}/exercise?assignment=B`}
                 className="inline-flex w-full sm:w-auto min-h-11 items-center justify-center gap-2 sm:min-w-[180px] rounded-xl px-4 py-2.5 text-sm font-medium transition-colors bg-primary text-primary-foreground"
               >
-                {stepStates[3]?.isCompleted ? (
+                {stepStates.find((step) => step.key === "B")?.isCompleted ? (
                   <>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Review Exercise

@@ -10,7 +10,7 @@ export interface AssignmentRow {
   chapter_id: string;
   title: string;
   order_index: number;
-  assignment_key: "A1" | "A2" | "A3" | "B";
+  assignment_key: "A1" | "A2" | "A3" | "A4" | "B";
 }
 
 export interface StudentAssignmentRow {
@@ -39,7 +39,7 @@ export async function seedStudentAssignments(studentId: string, hskLevel: number
   }
 }
 
-/** Resolves the caller's student_assignments row for a chapter + assignment key (A1/A2/A3/B). */
+/** Resolves the caller's student_assignments row for a chapter + assignment key (A1/A2/A3/A4/B). */
 export async function findStudentAssignmentForChapterKey(
   supabase: SupabaseClient,
   studentId: string,

@@ -2,9 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
 import { isValidHskLevel, hskLevelRangeLabel } from "@/lib/lms/hsk-levels";
 
-export type AssignmentKey = "A1" | "A2" | "A3" | "B";
+export type AssignmentKey = "A1" | "A2" | "A3" | "A4" | "B";
 
-export const ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3", "B"];
+export const ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3", "A4", "B"];
 
 export const CSV_COLUMNS_A = [
   "hsk_level",
@@ -16,7 +16,7 @@ export const CSV_COLUMNS_A = [
   "meaning_hint",
 ] as const;
 
-const A_ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3"];
+const A_ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3", "A4"];
 
 export interface AssignmentQuestionRow {
   id: string;
@@ -124,51 +124,6 @@ export async function resolveAssignmentId(
   return data?.id ?? null;
 }
 
-export async function getCombinedAQuestionsForChapter(
-  supabase: SupabaseClient,
-  chapterId: string
-): Promise<AssignmentQuestionRow[]> {
-  const { data, error } = await supabase
-    .from("assignment_questions")
-    .select(
-      `
-      id,
-      assignment_id,
-      question_order,
-      answer,
-      pinyin_hint,
-      meaning_hint,
-      assignment:assignments!inner(chapter_id, assignment_key)
-    `
-    )
-    .eq("assignments.chapter_id", chapterId)
-    .in("assignments.assignment_key", A_ASSIGNMENT_KEYS)
-    .order("question_order", { ascending: true });
-
-  if (error) throw new Error(error.message);
-
-  const keyOrder = new Map(A_ASSIGNMENT_KEYS.map((key, index) => [key, index]));
-  const rows = (data ?? []) as (AssignmentQuestionRow & {
-    assignment?:
-      | { assignment_key?: string }
-      | { assignment_key?: string }[]
-      | null;
-  })[];
-
-  return rows
-    .slice()
-    .sort((a, b) => {
-      const aAssignment = Array.isArray(a.assignment) ? a.assignment[0] : a.assignment;
-      const bAssignment = Array.isArray(b.assignment) ? b.assignment[0] : b.assignment;
-      const aKey = aAssignment?.assignment_key ?? "";
-      const bKey = bAssignment?.assignment_key ?? "";
-      const byKey = (keyOrder.get(aKey as AssignmentKey) ?? 99) - (keyOrder.get(bKey as AssignmentKey) ?? 99);
-      if (byKey !== 0) return byKey;
-      return a.question_order - b.question_order;
-    })
-    .map(({ assignment: _assignment, ...row }) => row);
-}
-
 export async function getQuestionsForAssignment(
   supabase: SupabaseClient,
   chapterId: string,
@@ -211,7 +166,7 @@ export function validateQuestionCsv(
     CSV_COLUMNS_A.every((col) => headers.includes(col));
 
   if (!hasAFormat) {
-    const expected = `Expected columns: ${CSV_COLUMNS_A.join(", ")} (A1–A3 only). Assignment B is generated automatically from A1, A2, and A3.`;
+    const expected = `Expected columns: ${CSV_COLUMNS_A.join(", ")}. assignment_key may be A1, A2, A3, A4, or B.`;
     errors.push({ row: 0, message: `Unknown columns. ${expected}` });
     return { validRows, errors };
   }
@@ -262,16 +217,7 @@ export function validateQuestionCsv(
 
     const assignmentKey = row.assignment_key ?? "";
     if (!isAssignmentKey(assignmentKey)) {
-      errors.push({ row: rowNumber, field: "assignment_key", message: "assignment_key must be A1, A2, A3, or B." });
-      return;
-    }
-
-    if (assignmentKey === "B") {
-      errors.push({
-        row: rowNumber,
-        field: "assignment_key",
-        message: "Assignment B is generated automatically from A1, A2, and A3 for the same chapter.",
-      });
+      errors.push({ row: rowNumber, field: "assignment_key", message: "assignment_key must be A1, A2, A3, A4, or B." });
       return;
     }
 
@@ -301,12 +247,13 @@ export function validateQuestionCsv(
 
     const pinyinHint = row.pinyin_hint ?? "";
     const meaningHint = row.meaning_hint ?? "";
-    if (!pinyinHint) {
-      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for A1–A3." });
+    const isAssignmentA = A_ASSIGNMENT_KEYS.includes(assignmentKey);
+    if (isAssignmentA && !pinyinHint) {
+      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for A1–A4." });
       return;
     }
-    if (!meaningHint) {
-      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for A1–A3." });
+    if (isAssignmentA && !meaningHint) {
+      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for A1–A4." });
       return;
     }
     validRows.push({
@@ -315,8 +262,8 @@ export function validateQuestionCsv(
       assignment_key: assignmentKey,
       question_order: questionOrder,
       answer,
-      pinyin_hint: pinyinHint,
-      meaning_hint: meaningHint,
+      pinyin_hint: pinyinHint || undefined,
+      meaning_hint: meaningHint || undefined,
     });
   });
 
@@ -364,40 +311,6 @@ async function insertQuestionRowsInChunks(
     const chunk = rows.slice(i, i + IMPORT_INSERT_CHUNK_SIZE);
     const { error } = await supabase.from("assignment_questions").insert(chunk);
     if (error) throw new Error(error.message);
-  }
-}
-
-async function syncAssignmentBForChapters(
-  supabase: SupabaseClient,
-  chapterIds: string[],
-  assignmentMap: Map<string, AssignmentLookup>
-): Promise<void> {
-  const uniqueChapterIds = [...new Set(chapterIds)];
-
-  for (const chapterId of uniqueChapterIds) {
-    const bAssignment = assignmentMap.get(`${chapterId}:B`);
-    if (!bAssignment) continue;
-
-    const combinedRows = await getCombinedAQuestionsForChapter(supabase, chapterId);
-
-    const { error: deleteError } = await supabase
-      .from("assignment_questions")
-      .delete()
-      .eq("assignment_id", bAssignment.id);
-
-    if (deleteError) throw new Error(deleteError.message);
-
-    if (combinedRows.length === 0) continue;
-
-    const inserts = combinedRows.map((row, index) => ({
-      assignment_id: bAssignment.id,
-      question_order: index + 1,
-      answer: row.answer,
-      pinyin_hint: null,
-      meaning_hint: null,
-    }));
-
-    await insertQuestionRowsInChunks(supabase, inserts);
   }
 }
 
@@ -474,8 +387,8 @@ export async function importQuestionRows(
         assignment_id: assignment.id,
         question_order: row.question_order,
         answer: row.answer,
-        pinyin_hint: row.pinyin_hint ?? null,
-        meaning_hint: row.meaning_hint ?? null,
+        pinyin_hint: row.pinyin_hint || null,
+        meaning_hint: row.meaning_hint || null,
       }));
 
     allInserts.push(...inserts);
@@ -483,15 +396,6 @@ export async function importQuestionRows(
 
   await insertQuestionRowsInChunks(supabase, allInserts);
   const imported = allInserts.length;
-
-  const chaptersToSyncB = [
-    ...new Set(
-      rows
-        .filter((row) => A_ASSIGNMENT_KEYS.includes(row.assignment_key))
-        .map((row) => row.chapter_id)
-    ),
-  ];
-  await syncAssignmentBForChapters(supabase, chaptersToSyncB, assignmentMap);
 
   await supabase.from("question_import_batches").insert({
     uploaded_by: uploadedBy,
@@ -507,5 +411,8 @@ export function assignmentCsvTemplate(): string {
     CSV_COLUMNS_A.join(","),
     "1,hsk1-ch1,A1,1,你好,ni hao,Halo",
     "1,hsk1-ch1,A1,2,谢谢,xie xie,Terima kasih",
+    "1,hsk1-ch1,A4,1,再见,zai jian,Sampai jumpa",
+    "1,hsk1-ch1,B,1,你好,,",
+    "1,hsk1-ch1,B,2,谢谢,,",
   ].join("\n");
 }

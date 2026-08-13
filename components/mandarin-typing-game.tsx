@@ -36,7 +36,8 @@ interface MandarinTypingGameProps {
 function completedCountForAssignment(assignmentLevel: AssignmentALevel) {
   if (assignmentLevel === "A1") return 1
   if (assignmentLevel === "A2") return 2
-  return 3
+  if (assignmentLevel === "A3") return 3
+  return 4
 }
 
 function normalizeVoiceLang(lang: string) {
@@ -347,7 +348,7 @@ export function MandarinTypingGame({
       }
 
       // Also upsert assignment-level completion into student_assignment_progress
-      // so that individual assignment completion is tracked (A1/A2/A3/B)
+      // so that individual assignment completion is tracked (A1/A2/A3/A4/B)
       try {
         await supabase.from("student_assignment_progress").upsert(
           {

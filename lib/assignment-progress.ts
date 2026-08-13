@@ -1,4 +1,4 @@
-export const ASSIGNMENT_KEYS = ["A1", "A2", "A3", "B"] as const;
+export const ASSIGNMENT_KEYS = ["A1", "A2", "A3", "A4", "B"] as const;
 
 export type AssignmentKey = (typeof ASSIGNMENT_KEYS)[number];
 
@@ -52,10 +52,16 @@ export const ASSIGNMENT_STEPS: AssignmentStepConfig[] = [
     order: 3,
   },
   {
+    key: "A4",
+    label: "Assignment A - Level 4",
+    chapterExerciseLabel: "A4",
+    order: 4,
+  },
+  {
     key: "B",
     label: "Assignment B",
     chapterExerciseLabel: "B",
-    order: 4,
+    order: 5,
   },
 ];
 
@@ -98,7 +104,11 @@ export function isAssignmentUnlocked(stepKey: AssignmentKey, summary: Assignment
     return summary.completedKeys.includes("A2");
   }
 
-  return summary.completedKeys.includes("A3");
+  if (stepKey === "A4") {
+    return summary.completedKeys.includes("A3");
+  }
+
+  return summary.completedKeys.includes("A4");
 }
 
 export function scoreToCompletedAssignments(score: number | null | undefined): number {
@@ -107,18 +117,22 @@ export function scoreToCompletedAssignments(score: number | null | undefined): n
   }
 
   if (score >= 100) {
+    return 5;
+  }
+
+  if (score >= 80) {
     return 4;
   }
 
-  if (score >= 75) {
+  if (score >= 60) {
     return 3;
   }
 
-  if (score >= 50) {
+  if (score >= 40) {
     return 2;
   }
 
-  if (score >= 25) {
+  if (score >= 20) {
     return 1;
   }
 
@@ -127,7 +141,7 @@ export function scoreToCompletedAssignments(score: number | null | undefined): n
 
 export function completedAssignmentsToScore(completedAssignments: number): number {
   const bounded = Math.min(Math.max(completedAssignments, 0), ASSIGNMENT_KEYS.length);
-  return bounded * 25;
+  return bounded * 20;
 }
 
 export function summaryFromChapterProgress(score: number | null | undefined): AssignmentSummary {

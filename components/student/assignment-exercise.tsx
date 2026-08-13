@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, CheckCircle2, Loader2, Lock } from "lucide-react";
 import dynamic from "next/dynamic";
-import { getCombinedAQuestionsForChapter, toWordPool } from "@/lib/lms/assignment-questions";
+import { getQuestionsForAssignment, toWordPool } from "@/lib/lms/assignment-questions";
 import { QuestionsUnavailable } from "@/components/student/questions-unavailable";
 
 const AssignmentBGame = dynamic(
@@ -42,6 +42,10 @@ function resolveStepKey(assignment: "A" | "B", level?: number): AssignmentKey {
     return "A3";
   }
 
+  if (level === 4) {
+    return "A4";
+  }
+
   return "A1";
 }
 
@@ -55,7 +59,7 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
   const [wordsLoading, setWordsLoading] = useState(false);
 
   const summary = useMemo(
-    () => summaryFromChapterProgress(completedAssignments * 25),
+    () => summaryFromChapterProgress(completedAssignments * 20),
     [completedAssignments]
   );
   const isUnlocked = isAssignmentUnlocked(stepKey, summary);
@@ -112,7 +116,7 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
       setWordsLoading(true);
       try {
         const supabase = createClient();
-        const rows = await getCombinedAQuestionsForChapter(supabase, chapterId);
+        const rows = await getQuestionsForAssignment(supabase, chapterId, "B");
         setAssignmentBWords(rows.length > 0 ? toWordPool(rows) : []);
       } finally {
         setWordsLoading(false);

@@ -94,7 +94,7 @@ export function AdminQuestionsContent() {
   };
 
   const handleTemplateDownload = () => {
-    downloadTextFile("questions-template-A1-A3.csv", assignmentCsvTemplate());
+    downloadTextFile("questions-template.csv", assignmentCsvTemplate());
   };
 
   const canImport = file && validationErrors.length === 0 && preview.length > 0;
@@ -113,7 +113,7 @@ export function AdminQuestionsContent() {
           onClick={() => handleTemplateDownload()}
         >
           <Download className="mr-2 h-4 w-4" />
-          A1–A3 template
+          CSV template
         </Button>
       </div>
 
@@ -130,8 +130,9 @@ export function AdminQuestionsContent() {
             />
             <p className="text-xs text-muted-foreground">
               Re-uploading rows for the same chapter and assignment replaces all existing questions for that
-              assignment. Upload A1, A2, and A3 only — assignment B is generated automatically from those
-              questions for each chapter. Supported keys: {ASSIGNMENT_KEYS.filter((key) => key !== "B").join(", ")}.
+              assignment only. A1–A4 and B are independent — uploading A does not change B, and uploading B
+              does not change A. A1–A4 require pinyin_hint and meaning_hint; B only requires the hanzi answer.
+              Supported keys: {ASSIGNMENT_KEYS.join(", ")}.
             </p>
           </div>
 

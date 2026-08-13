@@ -264,30 +264,30 @@ export function TypingGame({
     return (
       <div className="fixed inset-0 z-10 overflow-y-auto overscroll-none bg-background flex flex-col items-start sm:items-center justify-center p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-4">
         <div className="text-center space-y-6 sm:space-y-8 max-w-md w-full px-1 sm:px-0">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Hasil</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Results</h2>
           
           <div className="grid grid-cols-2 gap-3 sm:gap-6">
             <div className="space-y-1 p-3 sm:p-4 bg-card rounded-xl border border-border">
               <div className="text-4xl sm:text-5xl font-bold text-primary">{wpm}</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-wider">KPM</div>
+              <div className="text-sm text-muted-foreground uppercase tracking-wider">WPM</div>
             </div>
             <div className="space-y-1 p-3 sm:p-4 bg-card rounded-xl border border-border">
               <div className="text-4xl sm:text-5xl font-bold text-primary">{accuracy}%</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-wider">Akurasi</div>
+              <div className="text-sm text-muted-foreground uppercase tracking-wider">Accuracy</div>
             </div>
           </div>
 
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex justify-between text-foreground">
-              <span>Kata Benar</span>
+              <span>Correct words</span>
               <span className="text-green-600">{stats.correctWords}</span>
             </div>
             <div className="flex justify-between text-foreground">
-              <span>Kata Salah</span>
+              <span>Incorrect words</span>
               <span className="text-red-600">{stats.incorrectWords}</span>
             </div>
             <div className="flex justify-between text-foreground">
-              <span>Total Karakter</span>
+              <span>Total characters</span>
               <span>{stats.totalKeystrokes}</span>
             </div>
           </div>
@@ -323,7 +323,7 @@ export function TypingGame({
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               <RotateCcw className="h-4 w-4" />
-              Coba Lagi
+              Try again
             </button>
           </div>
         </div>
