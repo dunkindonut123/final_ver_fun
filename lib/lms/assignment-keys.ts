@@ -26,7 +26,7 @@ export const ASSIGNMENT_B_ORDER_INDEX = MAX_ASSIGNMENT_A_COUNT + 1;
  * supabase/migration_v2_assignment_a_count_by_hsk.sql a_counts and re-run it.
  */
 export const ASSIGNMENT_A_COUNT_BY_HSK: Record<number, number> = {
-  1: 6,
+  1: 3,
   2: 4,
   3: 4,
   4: 4,
