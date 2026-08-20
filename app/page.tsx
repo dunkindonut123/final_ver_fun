@@ -29,6 +29,7 @@ function FunMandarinLogo({ className = "" }: { className?: string }) {
       width={200}
       height={200}
       className={className}
+      style={{ width: "auto" }}
     />
   )
 }
@@ -207,7 +208,7 @@ export default function Home() {
             <div className="flex items-center justify-between h-17 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-4 lg:px-6 gap-2 lg:gap-3">
               {/* Logo */}
 
-              <FunMandarinLogo className="h-16 lg:h-20 xl:h-24 w-auto shrink-0" />
+              <FunMandarinLogo className="h-12 max-h-full w-auto shrink-0 object-contain" />
 
               {/* Desktop Navigation - Flex with Logo */}
               <nav className="hidden md:flex items-center gap-4 lg:gap-6 ml-3 lg:ml-5 flex-1 min-w-0 overflow-hidden">
