@@ -1,3 +1,6 @@
+export type { AssignmentALevel } from "@/lib/lms/assignment-keys"
+export { isAssignmentALevel } from "@/lib/lms/assignment-keys"
+
 export interface MandarinTypingQuestion {
 	id: number
 	answer: string
@@ -5,16 +8,8 @@ export interface MandarinTypingQuestion {
 	pinyinHint: string
 }
 
-export type AssignmentALevel = "A1" | "A2" | "A3" | "A4"
-
-const ASSIGNMENT_A_LEVELS: AssignmentALevel[] = ["A1", "A2", "A3", "A4"]
-
 /** Punctuation/symbols/spaces that are pre-filled; students only type the rest. */
 const ANSWER_STOPWORD_PATTERN = /[\s\p{P}\p{S}]/u
-
-export function isAssignmentALevel(value: string): value is AssignmentALevel {
-	return ASSIGNMENT_A_LEVELS.includes(value as AssignmentALevel)
-}
 
 export function isAnswerStopword(char: string): boolean {
 	return ANSWER_STOPWORD_PATTERN.test(char)

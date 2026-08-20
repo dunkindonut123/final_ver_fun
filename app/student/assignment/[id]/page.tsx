@@ -7,7 +7,7 @@ import {
   type AssignmentKey,
   type AssignmentQuestionRow,
 } from "@/lib/lms/assignment-questions";
-import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
+import { isAssignmentALevel, isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
 
 function extractQuestions(
   assignment: {
@@ -83,6 +83,10 @@ export default async function StudentAssignmentPage({
   }
 
   const assignmentKey = assignment.assignment_key as AssignmentKey;
+  if (!isAssignmentKeyForHsk(chapter.hsk_level, assignmentKey)) {
+    redirect(`/student/chapter/${assignment.chapter_id}`);
+  }
+
   const dbRows = extractQuestions(assignment);
   let mandarinQuestions;
   let assignmentBWords;

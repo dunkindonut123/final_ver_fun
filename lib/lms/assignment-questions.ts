@@ -1,10 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
-import { isValidHskLevel, hskLevelRangeLabel } from "@/lib/lms/hsk-levels";
+import { isValidHskLevel, hskLevelRangeLabel, HSK_LEVELS } from "@/lib/lms/hsk-levels";
+import {
+  ASSIGNMENT_KEYS,
+  assignmentACountLegend,
+  assignmentKeysForHsk,
+  assignmentAKeysForHsk,
+  isAssignmentALevel,
+  isAssignmentKey,
+  isAssignmentKeyForHsk,
+  lastAssignmentAKeyForHsk,
+  type AssignmentKey,
+} from "@/lib/lms/assignment-keys";
 
-export type AssignmentKey = "A1" | "A2" | "A3" | "A4" | "B";
-
-export const ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3", "A4", "B"];
+export type { AssignmentKey };
+export { ASSIGNMENT_KEYS, assignmentACountLegend };
 
 export const CSV_COLUMNS_A = [
   "hsk_level",
@@ -15,8 +25,6 @@ export const CSV_COLUMNS_A = [
   "pinyin_hint",
   "meaning_hint",
 ] as const;
-
-const A_ASSIGNMENT_KEYS: AssignmentKey[] = ["A1", "A2", "A3", "A4"];
 
 export interface AssignmentQuestionRow {
   id: string;
@@ -53,10 +61,6 @@ interface AssignmentLookup {
   id: string;
   chapter_id: string;
   assignment_key: AssignmentKey;
-}
-
-function isAssignmentKey(value: string): value is AssignmentKey {
-  return ASSIGNMENT_KEYS.includes(value as AssignmentKey);
 }
 
 function parseChapterLevel(chapterId: string): number | null {
@@ -166,7 +170,7 @@ export function validateQuestionCsv(
     CSV_COLUMNS_A.every((col) => headers.includes(col));
 
   if (!hasAFormat) {
-    const expected = `Expected columns: ${CSV_COLUMNS_A.join(", ")}. assignment_key may be A1, A2, A3, A4, or B.`;
+    const expected = `Expected columns: ${CSV_COLUMNS_A.join(", ")}. assignment_key depends on HSK level (${assignmentACountLegend()}).`;
     errors.push({ row: 0, message: `Unknown columns. ${expected}` });
     return { validRows, errors };
   }
@@ -216,8 +220,12 @@ export function validateQuestionCsv(
     }
 
     const assignmentKey = row.assignment_key ?? "";
-    if (!isAssignmentKey(assignmentKey)) {
-      errors.push({ row: rowNumber, field: "assignment_key", message: "assignment_key must be A1, A2, A3, A4, or B." });
+    if (!isAssignmentKey(assignmentKey) || !isAssignmentKeyForHsk(hskLevel, assignmentKey)) {
+      errors.push({
+        row: rowNumber,
+        field: "assignment_key",
+        message: `assignment_key must be one of ${assignmentKeysForHsk(hskLevel).join(", ")} for HSK ${hskLevel}.`,
+      });
       return;
     }
 
@@ -247,13 +255,13 @@ export function validateQuestionCsv(
 
     const pinyinHint = row.pinyin_hint ?? "";
     const meaningHint = row.meaning_hint ?? "";
-    const isAssignmentA = A_ASSIGNMENT_KEYS.includes(assignmentKey);
+    const isAssignmentA = isAssignmentALevel(assignmentKey);
     if (isAssignmentA && !pinyinHint) {
-      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for A1–A4." });
+      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for Assignment A." });
       return;
     }
     if (isAssignmentA && !meaningHint) {
-      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for A1–A4." });
+      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for Assignment A." });
       return;
     }
     validRows.push({
@@ -407,12 +415,19 @@ export async function importQuestionRows(
 }
 
 export function assignmentCsvTemplate(): string {
-  return [
-    CSV_COLUMNS_A.join(","),
-    "1,hsk1-ch1,A1,1,你好,ni hao,Halo",
-    "1,hsk1-ch1,A1,2,谢谢,xie xie,Terima kasih",
-    "1,hsk1-ch1,A4,1,再见,zai jian,Sampai jumpa",
-    "1,hsk1-ch1,B,1,你好,,",
-    "1,hsk1-ch1,B,2,谢谢,,",
-  ].join("\n");
+  const rows = [CSV_COLUMNS_A.join(",")];
+
+  for (const level of HSK_LEVELS) {
+    const chapterId = `hsk${level}-ch1`;
+    const aKeys = assignmentAKeysForHsk(level);
+    const firstA = aKeys[0];
+    const lastA = lastAssignmentAKeyForHsk(level);
+    rows.push(`${level},${chapterId},${firstA},1,你好,ni hao,Halo`);
+    if (lastA !== firstA) {
+      rows.push(`${level},${chapterId},${lastA},1,再见,zai jian,Sampai jumpa`);
+    }
+    rows.push(`${level},${chapterId},B,1,你好,,`);
+  }
+
+  return rows.join("\n");
 }

@@ -1,6 +1,13 @@
-export const ASSIGNMENT_KEYS = ["A1", "A2", "A3", "A4", "B"] as const;
+import {
+  ASSIGNMENT_KEYS,
+  ASSIGNMENT_B_ORDER_INDEX,
+  assignmentKeysForHsk,
+  isAssignmentKey,
+  resolveHskLevelForAssignments,
+  type AssignmentKey,
+} from "@/lib/lms/assignment-keys";
 
-export type AssignmentKey = (typeof ASSIGNMENT_KEYS)[number];
+export { ASSIGNMENT_KEYS, type AssignmentKey };
 
 export interface AssignmentProgressRow {
   chapter_id: string;
@@ -32,45 +39,44 @@ export interface AssignmentStepConfig {
   order: number;
 }
 
-export const ASSIGNMENT_STEPS: AssignmentStepConfig[] = [
-  {
-    key: "A1",
-    label: "Assignment A - Level 1",
-    chapterExerciseLabel: "A1",
-    order: 1,
-  },
-  {
-    key: "A2",
-    label: "Assignment A - Level 2",
-    chapterExerciseLabel: "A2",
-    order: 2,
-  },
-  {
-    key: "A3",
-    label: "Assignment A - Level 3",
-    chapterExerciseLabel: "A3",
-    order: 3,
-  },
-  {
-    key: "A4",
-    label: "Assignment A - Level 4",
-    chapterExerciseLabel: "A4",
-    order: 4,
-  },
-  {
-    key: "B",
-    label: "Assignment B",
-    chapterExerciseLabel: "B",
-    order: 5,
-  },
-];
+export function assignmentStepConfig(key: AssignmentKey): AssignmentStepConfig {
+  if (key === "B") {
+    return {
+      key: "B",
+      label: "Assignment B",
+      chapterExerciseLabel: "B",
+      order: ASSIGNMENT_B_ORDER_INDEX,
+    };
+  }
 
-export function normalizeAssignmentKey(value: string): AssignmentKey | null {
-  return ASSIGNMENT_KEYS.includes(value as AssignmentKey) ? (value as AssignmentKey) : null;
+  const levelNumber = Number(key.slice(1));
+  return {
+    key,
+    label: `Assignment A - Level ${levelNumber}`,
+    chapterExerciseLabel: key,
+    order: levelNumber,
+  };
 }
 
-export function summarizeAssignmentProgress(rows: AssignmentProgressRow[]): AssignmentSummary {
-  const completedKeys = ASSIGNMENT_STEPS.reduce<AssignmentKey[]>((result, step) => {
+export function assignmentStepsForHsk(hskLevel: number): AssignmentStepConfig[] {
+  return assignmentKeysForHsk(resolveHskLevelForAssignments(hskLevel)).map(assignmentStepConfig);
+}
+
+/** Full A1–A10 + B set. Prefer assignmentStepsForHsk when the HSK level is known. */
+export const ASSIGNMENT_STEPS: AssignmentStepConfig[] = assignmentStepsForHsk(
+  resolveHskLevelForAssignments(null)
+);
+
+export function normalizeAssignmentKey(value: string): AssignmentKey | null {
+  return isAssignmentKey(value) ? value : null;
+}
+
+export function summarizeAssignmentProgress(
+  rows: AssignmentProgressRow[],
+  hskLevel: number
+): AssignmentSummary {
+  const steps = assignmentStepsForHsk(hskLevel);
+  const completedKeys = steps.reduce<AssignmentKey[]>((result, step) => {
     const matchingRow = rows.find((row) => row.assignment_key === step.key && row.is_completed);
 
     if (matchingRow) {
@@ -80,79 +86,79 @@ export function summarizeAssignmentProgress(rows: AssignmentProgressRow[]): Assi
     return result;
   }, []);
 
-  const nextKey = ASSIGNMENT_STEPS.find((step) => !completedKeys.includes(step.key))?.key ?? null;
+  const nextKey = steps.find((step) => !completedKeys.includes(step.key))?.key ?? null;
 
   return {
     completedKeys,
     completedCount: completedKeys.length,
-    totalCount: ASSIGNMENT_STEPS.length,
-    isComplete: completedKeys.length === ASSIGNMENT_STEPS.length,
+    totalCount: steps.length,
+    isComplete: completedKeys.length === steps.length,
     nextKey,
   };
 }
 
-export function isAssignmentUnlocked(stepKey: AssignmentKey, summary: AssignmentSummary): boolean {
-  if (stepKey === "A1") {
-    return true;
+export function isAssignmentUnlocked(
+  stepKey: AssignmentKey,
+  summary: AssignmentSummary,
+  hskLevel: number
+): boolean {
+  const keys = assignmentKeysForHsk(resolveHskLevelForAssignments(hskLevel));
+  const index = keys.indexOf(stepKey);
+  if (index <= 0) {
+    return index === 0;
   }
 
-  if (stepKey === "A2") {
-    return summary.completedKeys.includes("A1");
-  }
-
-  if (stepKey === "A3") {
-    return summary.completedKeys.includes("A2");
-  }
-
-  if (stepKey === "A4") {
-    return summary.completedKeys.includes("A3");
-  }
-
-  return summary.completedKeys.includes("A4");
+  const previousKey = keys[index - 1];
+  return previousKey !== undefined && summary.completedKeys.includes(previousKey);
 }
 
-export function scoreToCompletedAssignments(score: number | null | undefined): number {
+export function scoreToCompletedAssignments(
+  score: number | null | undefined,
+  hskLevel: number
+): number {
   if (typeof score !== "number" || Number.isNaN(score)) {
     return 0;
   }
 
-  if (score >= 100) {
-    return 5;
+  const total = assignmentKeysForHsk(resolveHskLevelForAssignments(hskLevel)).length;
+  if (total === 0) {
+    return 0;
   }
 
-  if (score >= 80) {
-    return 4;
-  }
-
-  if (score >= 60) {
-    return 3;
-  }
-
-  if (score >= 40) {
-    return 2;
-  }
-
-  if (score >= 20) {
-    return 1;
-  }
-
-  return 0;
+  const step = 100 / total;
+  return Math.min(total, Math.max(0, Math.floor(score / step)));
 }
 
-export function completedAssignmentsToScore(completedAssignments: number): number {
-  const bounded = Math.min(Math.max(completedAssignments, 0), ASSIGNMENT_KEYS.length);
-  return bounded * 20;
+export function completedAssignmentsToScore(completedAssignments: number, hskLevel: number): number {
+  const total = assignmentKeysForHsk(resolveHskLevelForAssignments(hskLevel)).length;
+  const bounded = Math.min(Math.max(completedAssignments, 0), total);
+  if (total === 0) {
+    return 0;
+  }
+
+  return Math.round((bounded / total) * 100);
 }
 
-export function summaryFromChapterProgress(score: number | null | undefined): AssignmentSummary {
-  const completedCount = scoreToCompletedAssignments(score);
-  const completedKeys = ASSIGNMENT_STEPS.slice(0, completedCount).map((step) => step.key);
+export function summaryFromCompletedCount(
+  completedCount: number,
+  hskLevel: number
+): AssignmentSummary {
+  const steps = assignmentStepsForHsk(hskLevel);
+  const bounded = Math.min(Math.max(completedCount, 0), steps.length);
+  const completedKeys = steps.slice(0, bounded).map((step) => step.key);
 
   return {
     completedKeys,
-    completedCount,
-    totalCount: ASSIGNMENT_STEPS.length,
-    isComplete: completedCount === ASSIGNMENT_STEPS.length,
-    nextKey: ASSIGNMENT_STEPS[completedCount]?.key ?? null,
+    completedCount: bounded,
+    totalCount: steps.length,
+    isComplete: bounded === steps.length,
+    nextKey: steps[bounded]?.key ?? null,
   };
+}
+
+export function summaryFromChapterProgress(
+  score: number | null | undefined,
+  hskLevel: number
+): AssignmentSummary {
+  return summaryFromCompletedCount(scoreToCompletedAssignments(score, hskLevel), hskLevel);
 }

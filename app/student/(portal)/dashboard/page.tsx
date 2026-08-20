@@ -1,9 +1,16 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
 import { StudentDashboardContent } from "@/components/student/dashboard-content";
 
 function buildChapterProgress(
-  rows: { is_completed: boolean; assignment: { chapter_id: string } | { chapter_id: string }[] | null }[],
+  rows: {
+    is_completed: boolean;
+    assignment:
+      | { chapter_id: string; assignment_key?: string }
+      | { chapter_id: string; assignment_key?: string }[]
+      | null;
+  }[],
   hskLevel: number
 ): Record<string, { completed: number; total: number }> {
   const prefix = `hsk${hskLevel}-ch`;
@@ -13,6 +20,7 @@ function buildChapterProgress(
     const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
     const chapterId = assignment?.chapter_id;
     if (!chapterId || !chapterId.startsWith(prefix)) continue;
+    if (!isAssignmentKeyForHsk(hskLevel, assignment.assignment_key ?? "")) continue;
 
     const current = progress[chapterId] ?? { completed: 0, total: 0 };
     current.total += 1;
@@ -70,7 +78,7 @@ export default async function StudentDashboard() {
         : Promise.resolve({ data: null }),
       supabase
         .from("student_assignments")
-        .select("is_completed, assignment:assignments(chapter_id)")
+        .select("is_completed, assignment:assignments(chapter_id, assignment_key)")
         .eq("student_id", user.id),
     ]);
 

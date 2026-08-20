@@ -5,10 +5,10 @@ import Link from "next/link"
 import { Home, RotateCcw, Volume2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import {
-  ASSIGNMENT_KEYS,
   completedAssignmentsToScore,
   scoreToCompletedAssignments,
 } from "@/lib/assignment-progress"
+import { assignmentKeysForHsk } from "@/lib/lms/assignment-keys"
 import {
   filterStudentHanziInput,
   getAnswerSlotDisplays,
@@ -34,10 +34,7 @@ interface MandarinTypingGameProps {
 }
 
 function completedCountForAssignment(assignmentLevel: AssignmentALevel) {
-  if (assignmentLevel === "A1") return 1
-  if (assignmentLevel === "A2") return 2
-  if (assignmentLevel === "A3") return 3
-  return 4
+  return Number.parseInt(assignmentLevel.slice(1), 10)
 }
 
 function normalizeVoiceLang(lang: string) {
@@ -323,16 +320,17 @@ export function MandarinTypingGame({
         return
       }
 
-      const previousCompleted = scoreToCompletedAssignments(existingProgress?.score ?? null)
+      const previousCompleted = scoreToCompletedAssignments(existingProgress?.score ?? null, hskLevel)
       const targetCompleted = completedCountForAssignment(assignmentLevel)
       const nextCompleted = Math.max(previousCompleted, targetCompleted)
+      const totalAssignments = assignmentKeysForHsk(hskLevel).length
 
       const { error: upsertError } = await supabase.from("student_chapter_progress").upsert(
         {
           student_id: userData.user.id,
           chapter_id: chapterId,
-          score: completedAssignmentsToScore(nextCompleted),
-          is_completed: nextCompleted === ASSIGNMENT_KEYS.length,
+          score: completedAssignmentsToScore(nextCompleted, hskLevel),
+          is_completed: nextCompleted === totalAssignments,
           time_spent_minutes: 0,
           last_accessed: new Date().toISOString(),
         },
@@ -348,7 +346,7 @@ export function MandarinTypingGame({
       }
 
       // Also upsert assignment-level completion into student_assignment_progress
-      // so that individual assignment completion is tracked (A1/A2/A3/A4/B)
+      // so that individual assignment completion is tracked
       try {
         await supabase.from("student_assignment_progress").upsert(
           {
@@ -370,7 +368,7 @@ export function MandarinTypingGame({
       setSaveState("error")
       setSaveMessage("Failed to save assignment progress.")
     }
-  }, [assignmentLevel, chapterId, studentAssignmentId, totalQuestions])
+  }, [assignmentLevel, chapterId, hskLevel, studentAssignmentId, totalQuestions])
 
   if (totalQuestions === 0) {
     return <QuestionsUnavailable returnHref={returnHref} />

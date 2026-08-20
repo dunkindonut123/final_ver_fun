@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  ASSIGNMENT_STEPS,
+  assignmentStepsForHsk,
   completedAssignmentsToScore,
   isAssignmentUnlocked,
   scoreToCompletedAssignments,
-  summaryFromChapterProgress,
+  summaryFromCompletedCount,
   type AssignmentKey,
 } from "@/lib/assignment-progress";
+import { parseHskLevelFromChapterId, resolveHskLevelForAssignments, isAssignmentKey } from "@/lib/lms/assignment-keys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,23 +35,14 @@ function resolveStepKey(assignment: "A" | "B", level?: number): AssignmentKey {
     return "B";
   }
 
-  if (level === 2) {
-    return "A2";
-  }
-
-  if (level === 3) {
-    return "A3";
-  }
-
-  if (level === 4) {
-    return "A4";
-  }
-
-  return "A1";
+  const key = `A${level ?? 1}`;
+  return isAssignmentKey(key) ? key : "A1";
 }
 
 export function AssignmentExerciseClient({ chapterId, assignment, level }: AssignmentExerciseClientProps) {
   const stepKey = useMemo(() => resolveStepKey(assignment, level), [assignment, level]);
+  const hskLevel = resolveHskLevelForAssignments(parseHskLevelFromChapterId(chapterId));
+  const steps = useMemo(() => assignmentStepsForHsk(hskLevel), [hskLevel]);
   const [completedAssignments, setCompletedAssignments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,13 +51,13 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
   const [wordsLoading, setWordsLoading] = useState(false);
 
   const summary = useMemo(
-    () => summaryFromChapterProgress(completedAssignments * 20),
-    [completedAssignments]
+    () => summaryFromCompletedCount(completedAssignments, hskLevel),
+    [completedAssignments, hskLevel]
   );
-  const isUnlocked = isAssignmentUnlocked(stepKey, summary);
-  const stepIndex = ASSIGNMENT_STEPS.findIndex((step) => step.key === stepKey);
+  const isUnlocked = isAssignmentUnlocked(stepKey, summary, hskLevel);
+  const stepIndex = steps.findIndex((step) => step.key === stepKey);
   const isCompleted = completedAssignments > stepIndex;
-  const stepConfig = ASSIGNMENT_STEPS.find((step) => step.key === stepKey);
+  const stepConfig = steps.find((step) => step.key === stepKey);
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -88,7 +80,7 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
         if (assignmentRows && assignmentRows.length > 0) {
           const completedKeys = assignmentRows.filter((r: any) => r.is_completed).map((r: any) => r.assignment_key);
           // Count completed known keys
-          const knownKeys = ASSIGNMENT_STEPS.map((s) => s.key);
+          const knownKeys = steps.map((s) => s.key);
           const completedCount = knownKeys.filter((k) => completedKeys.includes(k)).length;
           setCompletedAssignments(completedCount);
         } else {
@@ -99,7 +91,7 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
             .eq("chapter_id", chapterId)
             .maybeSingle();
 
-          setCompletedAssignments(scoreToCompletedAssignments(data?.score ?? null));
+          setCompletedAssignments(scoreToCompletedAssignments(data?.score ?? null, hskLevel));
         }
       } finally {
         setLoading(false);
@@ -107,7 +99,7 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
     };
 
     loadProgress();
-  }, [chapterId]);
+  }, [chapterId, hskLevel, steps]);
 
   useEffect(() => {
     if (stepKey !== "B") return;
@@ -146,15 +138,15 @@ export function AssignmentExerciseClient({ chapterId, assignment, level }: Assig
 
       const nextCompletedCount = Math.max(
         summary.completedCount,
-        ASSIGNMENT_STEPS.findIndex((step) => step.key === stepKey) + 1
+        steps.findIndex((step) => step.key === stepKey) + 1
       );
 
       const { error } = await supabase.from("student_chapter_progress").upsert(
         {
           student_id: userData.user.id,
           chapter_id: chapterId,
-          score: completedAssignmentsToScore(nextCompletedCount),
-          is_completed: nextCompletedCount === ASSIGNMENT_STEPS.length,
+          score: completedAssignmentsToScore(nextCompletedCount, hskLevel),
+          is_completed: nextCompletedCount === steps.length,
           time_spent_minutes: 0,
           last_accessed: new Date().toISOString(),
         },

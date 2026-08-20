@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  ASSIGNMENT_STEPS,
-  completedAssignmentsToScore,
+  assignmentStepsForHsk,
   isAssignmentUnlocked,
   scoreToCompletedAssignments,
-  summaryFromChapterProgress,
-  type AssignmentKey,
+  summaryFromCompletedCount,
 } from "@/lib/assignment-progress";
+import {
+  assignmentACountForHsk,
+  lastAssignmentAKeyForHsk,
+  resolveHskLevelForAssignments,
+} from "@/lib/lms/assignment-keys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,22 +51,26 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
   const [loading, setLoading] = useState(true);
 
   const chapterInfo = useMemo(() => parseChapterInfo(chapterId), [chapterId]);
+  const hskLevel = resolveHskLevelForAssignments(chapterInfo.hskLevel);
+  const assignmentACount = assignmentACountForHsk(hskLevel);
+  const lastAssignmentAKey = lastAssignmentAKeyForHsk(hskLevel);
+  const steps = useMemo(() => assignmentStepsForHsk(hskLevel), [hskLevel]);
   const summary = useMemo(
-    () => summaryFromChapterProgress(completedAssignments * 20),
-    [completedAssignments]
+    () => summaryFromCompletedCount(completedAssignments, hskLevel),
+    [completedAssignments, hskLevel]
   );
-  const isAssignmentBUnlocked = isAssignmentUnlocked("B", summary);
+  const isAssignmentBUnlocked = isAssignmentUnlocked("B", summary, hskLevel);
   const stepStates = useMemo(() => {
-    return ASSIGNMENT_STEPS.map((step) => {
-      const stepIndex = ASSIGNMENT_STEPS.findIndex((item) => item.key === step.key);
+    return steps.map((step) => {
+      const stepIndex = steps.findIndex((item) => item.key === step.key);
 
       return {
         ...step,
         isCompleted: completedAssignments > stepIndex,
-        isUnlocked: isAssignmentUnlocked(step.key, summary),
+        isUnlocked: isAssignmentUnlocked(step.key, summary, hskLevel),
       };
     });
-  }, [completedAssignments, summary]);
+  }, [completedAssignments, hskLevel, steps, summary]);
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -84,14 +91,14 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
           .eq("chapter_id", chapterId)
           .maybeSingle();
 
-        setCompletedAssignments(scoreToCompletedAssignments(data?.score ?? null));
+        setCompletedAssignments(scoreToCompletedAssignments(data?.score ?? null, hskLevel));
       } finally {
         setLoading(false);
       }
     };
 
     loadProgress();
-  }, [chapterId]);
+  }, [chapterId, hskLevel]);
 
   return (
     <div className="space-y-6">
@@ -119,11 +126,11 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
           <div>
             <h3 className="text-lg font-semibold text-card-foreground">Assignment A</h3>
             <p className="text-sm text-muted-foreground">
-              Complete the four levels in sequence to unlock Assignment B.
+              Complete the {assignmentACount} levels in sequence to unlock Assignment B.
             </p>
           </div>
           <Badge variant="secondary" className="rounded-full">
-            {summary.completedKeys.includes("A4") ? "B unlocked" : "B locked"}
+            {isAssignmentBUnlocked ? "B unlocked" : "B locked"}
           </Badge>
         </div>
 
@@ -203,7 +210,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
           <div>
             <h3 className="text-lg font-semibold text-card-foreground">Assignment B</h3>
             <p className="text-sm text-muted-foreground">
-              The final assignment unlocks only after all four Assignment A levels are complete.
+              The final assignment unlocks only after all {assignmentACount} Assignment A levels are complete.
             </p>
           </div>
           <Badge
@@ -223,7 +230,7 @@ export function AssignmentFlow({ chapterId }: AssignmentFlowProps) {
               <p className="mt-1 text-sm text-muted-foreground">
                 {isAssignmentBUnlocked
                   ? "Open the final exercise placeholder for Assignment B."
-                  : "Complete Assignment A Level 4 to unlock this final task."}
+                  : `Complete Assignment ${lastAssignmentAKey} to unlock this final task.`}
               </p>
             </div>
 

@@ -79,7 +79,7 @@ create table if not exists public.student_chapter_progress (
 create table if not exists public.student_assignment_progress (
   student_id uuid not null references public.students(user_id) on delete cascade,
   chapter_id text not null references public.hsk_chapters(id) on delete cascade,
-  assignment_key text not null check (assignment_key in ('A1', 'A2', 'A3', 'A4', 'B')),
+  assignment_key text not null check (assignment_key in ('A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10', 'B')),
   is_completed boolean not null default false,
   completed_at timestamptz,
   updated_at timestamptz not null default now(),

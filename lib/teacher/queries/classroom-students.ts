@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
 
 export type ClassroomStudentRow = {
   id: string;
@@ -30,7 +31,7 @@ export async function getClassroomStudentRows(
     supabase.from("profiles").select("id, full_name").in("id", ids),
     supabase
       .from("student_assignments")
-      .select("student_id, is_locked, is_completed, score, assignment:assignments(chapter_id)")
+      .select("student_id, is_locked, is_completed, score, assignment:assignments(chapter_id, assignment_key)")
       .in("student_id", ids),
   ]);
 
@@ -46,6 +47,7 @@ export async function getClassroomStudentRows(
   (assignments ?? []).forEach((row) => {
     const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
     if (!assignment?.chapter_id?.startsWith(levelPrefix)) return;
+    if (!isAssignmentKeyForHsk(hskLevel, assignment.assignment_key ?? "")) return;
 
     const current = stats.get(row.student_id);
     if (!current) return;

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getQuestionCountsByAssignmentIds } from "@/lib/lms/assignment-questions";
-import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
+import { isAssignmentALevel, isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
 import {
   ChapterDetailContent,
   type ChapterAssignmentItem,
@@ -124,7 +124,9 @@ export default async function StudentChapterPage({
     redirect("/student/dashboard");
   }
 
-  const baseAssignments = mapAssignmentRows(assignmentRows ?? []);
+  const baseAssignments = mapAssignmentRows(assignmentRows ?? []).filter((assignment) =>
+    isAssignmentKeyForHsk(chapter.hsk_level, assignment.assignmentKey)
+  );
   const aAssignmentIds = baseAssignments
     .filter((assignment) => isAssignmentALevel(assignment.assignmentKey))
     .map((assignment) => assignment.assignmentId);

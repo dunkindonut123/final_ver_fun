@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation"
-import { isAssignmentALevel } from "@/lib/mandarin-typing-questions"
+import { isAssignmentALevel, isAssignmentKeyForHsk, parseHskLevelFromChapterId } from "@/lib/lms/assignment-keys"
 import { isValidHskLevel } from "@/lib/lms/hsk-levels"
 import { findStudentAssignmentForChapterKey } from "@/lib/lms/student-assignments"
 import type { AssignmentRow } from "@/lib/lms/student-assignments"
@@ -47,6 +47,15 @@ export default async function TypingHanziPage({
 
   // HSK is optional for B/legacy links; when present it must be valid.
   if (query.hsk !== undefined && query.hsk !== "" && !isValidHskLevel(hskLevel)) {
+    notFound()
+  }
+
+  const chapterHsk = parseHskLevelFromChapterId(chapterId)
+  const effectiveHsk = isValidHskLevel(hskLevel) ? hskLevel : chapterHsk
+  if (effectiveHsk !== null && !isAssignmentKeyForHsk(effectiveHsk, assignmentKey)) {
+    notFound()
+  }
+  if (isValidHskLevel(hskLevel) && chapterHsk !== null && hskLevel !== chapterHsk) {
     notFound()
   }
 

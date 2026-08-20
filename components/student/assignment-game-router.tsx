@@ -3,7 +3,8 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { MandarinTypingGame } from "@/components/mandarin-typing-game";
-import { isAssignmentALevel, type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
+import { isAssignmentALevel, isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
+import { type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuestionsUnavailable } from "@/components/student/questions-unavailable";
@@ -66,7 +67,7 @@ export function AssignmentGameRouter({
     );
   }
 
-  if (isAssignmentALevel(assignmentKey)) {
+  if (isAssignmentALevel(assignmentKey) && isAssignmentKeyForHsk(hskLevel, assignmentKey)) {
     if (!mandarinQuestions?.length) {
       return <QuestionsUnavailable returnHref={returnHref} />;
     }

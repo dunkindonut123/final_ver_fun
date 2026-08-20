@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getQuestionCountsByAssignmentIds } from "@/lib/lms/assignment-questions";
-import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
+import { isAssignmentALevel, isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
 
 export type AssignmentStatus = "not_started" | "in_progress" | "completed";
 
@@ -117,6 +117,7 @@ export async function getStudentAssignmentToggles(
     .map((row) => {
       const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
       if (!assignment?.chapter_id?.startsWith(levelPrefix)) return null;
+      if (!isAssignmentKeyForHsk(hskLevel, assignment.assignment_key ?? "")) return null;
 
       const chapter = chapterMap.get(assignment.chapter_id);
       const chapterTitle = chapter?.title ?? assignment.chapter_id;

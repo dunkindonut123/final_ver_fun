@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   ASSIGNMENT_KEYS,
+  assignmentACountLegend,
   assignmentCsvTemplate,
   validateQuestionCsv,
 } from "@/lib/lms/assignment-questions";
@@ -130,9 +131,9 @@ export function AdminQuestionsContent() {
             />
             <p className="text-xs text-muted-foreground">
               Re-uploading rows for the same chapter and assignment replaces all existing questions for that
-              assignment only. A1–A4 and B are independent — uploading A does not change B, and uploading B
-              does not change A. A1–A4 require pinyin_hint and meaning_hint; B only requires the hanzi answer.
-              Supported keys: {ASSIGNMENT_KEYS.join(", ")}.
+              assignment only. Assignment A and B are independent — uploading A does not change B, and uploading B
+              does not change A.               Assignment A requires pinyin_hint and meaning_hint; B only requires the hanzi answer.
+              Per-level slots: {assignmentACountLegend()}. Supported keys: {ASSIGNMENT_KEYS.join(", ")}.
             </p>
           </div>
 
