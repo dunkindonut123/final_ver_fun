@@ -12,6 +12,7 @@ import {
   assignmentCsvTemplate,
   validateQuestionCsv,
 } from "@/lib/lms/assignment-questions";
+import { chapterCountLegend } from "@/lib/lms/hsk-chapters";
 import { parseCsv } from "@/lib/lms/csv-parser";
 import { Download, Loader2, Upload } from "lucide-react";
 
@@ -134,8 +135,9 @@ export function AdminQuestionsContent() {
             <p className="text-xs text-muted-foreground">
               Re-uploading rows for the same chapter and assignment replaces all existing questions for that
               assignment only. Assignment A and B are independent — uploading A does not change B, and uploading B
-              does not change A.               Assignment A requires pinyin_hint and meaning_hint; B only requires the hanzi answer.
-              Per-level slots: {assignmentACountLegend()}. Supported keys: {ASSIGNMENT_KEYS.join(", ")}.
+              does not change A. Assignment A requires pinyin_hint and meaning_hint; B only requires the hanzi answer.
+              Chapters: {chapterCountLegend()}. Per-level slots: {assignmentACountLegend()}. Supported keys:{" "}
+              {ASSIGNMENT_KEYS.join(", ")}.
             </p>
           </div>
 

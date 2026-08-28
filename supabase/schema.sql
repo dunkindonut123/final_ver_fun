@@ -52,7 +52,7 @@ create table if not exists public.hsk_chapters (
   id text primary key,
   title text not null,
   hsk_level int not null check (hsk_level between 1 and 9),
-  chapter_number int not null check (chapter_number between 1 and 10),
+  chapter_number int not null check (chapter_number between 1 and 15),
   created_at timestamptz not null default now(),
   unique (hsk_level, chapter_number)
 );

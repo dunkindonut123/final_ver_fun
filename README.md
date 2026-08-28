@@ -56,6 +56,7 @@ npm install
    - Then: [supabase/migration_v2_assignment_a4.sql](supabase/migration_v2_assignment_a4.sql) — adds Assignment A4 before B for every chapter
    - Then: [supabase/migration_v2_assignment_a10.sql](supabase/migration_v2_assignment_a10.sql) — allows A1–A10 + B (B at order 11)
    - Then: [supabase/migration_v2_assignment_a_count_by_hsk.sql](supabase/migration_v2_assignment_a_count_by_hsk.sql) — syncs Assignment A slots per HSK (counts live in `lib/lms/assignment-keys.ts`; re-run this SQL after changing them)
+   - Then: [supabase/migration_v2_chapter_count_by_hsk.sql](supabase/migration_v2_chapter_count_by_hsk.sql) — syncs chapter count per HSK (counts live in `lib/lms/hsk-chapters.ts`; re-run this SQL after changing them, then re-run `migration_v2_assignment_a_count_by_hsk.sql` so new chapters get assignment slots)
 6. In **Authentication → Providers → Email**:
    - Enable email/password auth
    - **Disable** "Confirm email" (required for current signup flow)

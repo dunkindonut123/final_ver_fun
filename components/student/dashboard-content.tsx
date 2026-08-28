@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, ChevronRight } from "lucide-react";
+import { chapterCountForHsk, chapterIdFor } from "@/lib/lms/hsk-chapters";
 
 interface Student {
   id: string;
@@ -30,9 +31,10 @@ interface StudentDashboardContentProps {
 export function StudentDashboardContent({ student, chapterProgress }: StudentDashboardContentProps) {
   const chapters = useMemo<Chapter[]>(() => {
     const generated: Chapter[] = [];
-    for (let chapter = 1; chapter <= 10; chapter += 1) {
+    const count = chapterCountForHsk(student.current_hsk_level);
+    for (let chapter = 1; chapter <= count; chapter += 1) {
       generated.push({
-        id: `hsk${student.current_hsk_level}-ch${chapter}`,
+        id: chapterIdFor(student.current_hsk_level, chapter),
         title: `Chapter ${chapter}`,
         hsk_level: student.current_hsk_level,
         chapter_number: chapter,

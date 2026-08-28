@@ -1,17 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
+import { chapterIdsForHsk } from "@/lib/lms/hsk-chapters";
 
 interface Chapter {
   id: string;
   hsk_level: number;
   chapter_number: number;
-}
-
-function fallbackLevelChapterIds(level: number): string[] {
-  const ids: string[] = [];
-  for (let chapter = 1; chapter <= 10; chapter += 1) {
-    ids.push(`hsk${level}-ch${chapter}`);
-  }
-  return ids;
 }
 
 async function getChapterIdsForLevel(level: number): Promise<string[]> {
@@ -23,7 +16,7 @@ async function getChapterIdsForLevel(level: number): Promise<string[]> {
     .order("chapter_number", { ascending: true });
 
   if (error || !data || data.length === 0) {
-    return fallbackLevelChapterIds(level);
+    return chapterIdsForHsk(level);
   }
 
   return (data as Chapter[]).map((chapter) => chapter.id);

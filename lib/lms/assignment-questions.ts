@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
 import type { ParsedCsvRow } from "@/lib/lms/csv-parser";
 import { isValidHskLevel, hskLevelRangeLabel, HSK_LEVELS } from "@/lib/lms/hsk-levels";
+import { chapterCountForHsk, isChapterIdForHsk } from "@/lib/lms/hsk-chapters";
 import {
   ASSIGNMENT_KEYS,
   assignmentACountLegend,
@@ -247,6 +248,16 @@ export function validateQuestionCsv(
         row: rowNumber,
         field: "chapter_id",
         message: `chapter_id "${chapterId}" does not match hsk_level ${hskLevel}.`,
+        ...loc(),
+      });
+      return;
+    }
+    if (!isChapterIdForHsk(hskLevel, chapterId)) {
+      const count = chapterCountForHsk(hskLevel);
+      errors.push({
+        row: rowNumber,
+        field: "chapter_id",
+        message: `chapter_id "${chapterId}" is not valid for HSK ${hskLevel} (chapters 1–${count}).`,
         ...loc(),
       });
       return;
