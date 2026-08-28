@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
+import type { ParsedCsvRow } from "@/lib/lms/csv-parser";
 import { isValidHskLevel, hskLevelRangeLabel, HSK_LEVELS } from "@/lib/lms/hsk-levels";
 import {
   ASSIGNMENT_KEYS,
@@ -43,12 +44,40 @@ export interface ParsedQuestionCsvRow {
   answer: string;
   pinyin_hint?: string;
   meaning_hint?: string;
+  excelRow: number;
 }
 
 export interface CsvValidationError {
   row: number;
   field?: string;
   message: string;
+  /** Spreadsheet identity: chapter, assignment, question number. */
+  locator?: string;
+  /** Text to Find in Excel (usually the hanzi answer). */
+  searchText?: string;
+}
+
+function csvErrorLocation(
+  chapterId?: string,
+  assignmentKey?: string,
+  questionOrder?: string | number,
+  answer?: string
+): Pick<CsvValidationError, "locator" | "searchText"> {
+  const parts = [
+    chapterId || undefined,
+    assignmentKey || undefined,
+    questionOrder != null && String(questionOrder).trim() !== "" ? `question ${questionOrder}` : undefined,
+  ].filter((part): part is string => Boolean(part));
+  const trimmedAnswer = answer?.trim() || "";
+  const searchText = trimmedAnswer
+    ? trimmedAnswer.length > 80
+      ? `${trimmedAnswer.slice(0, 80)}...`
+      : trimmedAnswer
+    : undefined;
+  return {
+    locator: parts.length > 0 ? parts.join(" ") : undefined,
+    searchText,
+  };
 }
 
 export interface ImportSummary {
@@ -156,7 +185,7 @@ export async function getQuestionsForAssignment(
 
 export function validateQuestionCsv(
   headers: string[],
-  rows: Record<string, string>[]
+  rows: ParsedCsvRow[]
 ): { validRows: ParsedQuestionCsvRow[]; errors: CsvValidationError[] } {
   const errors: CsvValidationError[] = [];
   const validRows: ParsedQuestionCsvRow[] = [];
@@ -190,24 +219,27 @@ export function validateQuestionCsv(
 
   const seenKeys = new Set<string>();
 
-  rows.forEach((row, index) => {
-    const rowNumber = index + 2;
+  rows.forEach((parsedRow) => {
+    const row = parsedRow.values;
+    const rowNumber = parsedRow.excelRow;
+    const loc = () =>
+      csvErrorLocation(row.chapter_id, row.assignment_key, row.question_order, row.answer);
     const hskLevelRaw = row.hsk_level ?? "";
     const hskLevel = parseInt(hskLevelRaw, 10);
     if (!hskLevelRaw || !isValidHskLevel(hskLevel)) {
-      errors.push({ row: rowNumber, field: "hsk_level", message: `hsk_level must be an integer from ${hskLevelRangeLabel()}.` });
+      errors.push({ row: rowNumber, field: "hsk_level", message: `hsk_level must be an integer from ${hskLevelRangeLabel()}.`, ...loc() });
       return;
     }
 
     const chapterId = row.chapter_id ?? "";
     if (!chapterId) {
-      errors.push({ row: rowNumber, field: "chapter_id", message: "chapter_id is required." });
+      errors.push({ row: rowNumber, field: "chapter_id", message: "chapter_id is required.", ...loc() });
       return;
     }
 
     const chapterLevel = parseChapterLevel(chapterId);
     if (chapterLevel === null) {
-      errors.push({ row: rowNumber, field: "chapter_id", message: `Invalid chapter_id format "${chapterId}". Expected e.g. hsk1-ch1.` });
+      errors.push({ row: rowNumber, field: "chapter_id", message: `Invalid chapter_id format "${chapterId}". Expected e.g. hsk1-ch1.`, ...loc() });
       return;
     }
     if (chapterLevel !== hskLevel) {
@@ -215,6 +247,7 @@ export function validateQuestionCsv(
         row: rowNumber,
         field: "chapter_id",
         message: `chapter_id "${chapterId}" does not match hsk_level ${hskLevel}.`,
+        ...loc(),
       });
       return;
     }
@@ -225,6 +258,7 @@ export function validateQuestionCsv(
         row: rowNumber,
         field: "assignment_key",
         message: `assignment_key must be one of ${assignmentKeysForHsk(hskLevel).join(", ")} for HSK ${hskLevel}.`,
+        ...loc(),
       });
       return;
     }
@@ -232,13 +266,13 @@ export function validateQuestionCsv(
     const orderRaw = row.question_order ?? "";
     const questionOrder = parseInt(orderRaw, 10);
     if (!orderRaw || Number.isNaN(questionOrder) || questionOrder < 1) {
-      errors.push({ row: rowNumber, field: "question_order", message: "question_order must be a positive integer." });
+      errors.push({ row: rowNumber, field: "question_order", message: "question_order must be a positive integer.", ...loc() });
       return;
     }
 
     const answer = row.answer ?? "";
     if (!answer) {
-      errors.push({ row: rowNumber, field: "answer", message: "answer is required." });
+      errors.push({ row: rowNumber, field: "answer", message: "answer is required.", ...loc() });
       return;
     }
 
@@ -248,6 +282,7 @@ export function validateQuestionCsv(
         row: rowNumber,
         field: "question_order",
         message: `Duplicate question_order ${questionOrder} for ${chapterId} ${assignmentKey}.`,
+        ...loc(),
       });
       return;
     }
@@ -257,11 +292,11 @@ export function validateQuestionCsv(
     const meaningHint = row.meaning_hint ?? "";
     const isAssignmentA = isAssignmentALevel(assignmentKey);
     if (isAssignmentA && !pinyinHint) {
-      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for Assignment A." });
+      errors.push({ row: rowNumber, field: "pinyin_hint", message: "pinyin_hint is required for Assignment A.", ...loc() });
       return;
     }
     if (isAssignmentA && !meaningHint) {
-      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for Assignment A." });
+      errors.push({ row: rowNumber, field: "meaning_hint", message: "meaning_hint is required for Assignment A.", ...loc() });
       return;
     }
     validRows.push({
@@ -272,6 +307,7 @@ export function validateQuestionCsv(
       answer,
       pinyin_hint: pinyinHint || undefined,
       meaning_hint: meaningHint || undefined,
+      excelRow: rowNumber,
     });
   });
 
@@ -333,20 +369,22 @@ export async function importQuestionRows(
   ]);
   const errors: CsvValidationError[] = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
+  for (const row of rows) {
+    const loc = csvErrorLocation(row.chapter_id, row.assignment_key, row.question_order, row.answer);
     if (!chapterIds.has(row.chapter_id)) {
       errors.push({
-        row: i + 2,
+        row: row.excelRow,
         field: "chapter_id",
         message: `chapter_id "${row.chapter_id}" does not exist in hsk_chapters.`,
+        ...loc,
       });
     }
     if (!assignmentMap.has(`${row.chapter_id}:${row.assignment_key}`)) {
       errors.push({
-        row: i + 2,
+        row: row.excelRow,
         field: "assignment_key",
         message: `No assignment found for ${row.chapter_id} ${row.assignment_key}.`,
+        ...loc,
       });
     }
   }

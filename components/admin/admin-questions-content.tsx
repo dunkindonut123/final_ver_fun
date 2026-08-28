@@ -19,6 +19,8 @@ interface CsvValidationError {
   row: number;
   field?: string;
   message: string;
+  locator?: string;
+  searchText?: string;
 }
 
 function downloadTextFile(filename: string, content: string) {
@@ -57,7 +59,7 @@ export function AdminQuestionsContent() {
     const text = await nextFile.text();
     const parsed = parseCsv(text);
     setHeaders(parsed.headers);
-    setPreview(parsed.rows);
+    setPreview(parsed.rows.map((row) => row.values));
 
     const validation = validateQuestionCsv(parsed.headers, parsed.rows);
     setValidationErrors(validation.errors);
@@ -178,8 +180,9 @@ export function AdminQuestionsContent() {
               <ul className="space-y-1 text-sm text-red-700">
                 {validationErrors.map((item, index) => (
                   <li key={`${item.row}-${item.field ?? "general"}-${index}`}>
-                    Row {item.row}
+                    {item.locator ?? `Row ${item.row}`}
                     {item.field ? ` (${item.field})` : ""}: {item.message}
+                    {item.searchText ? ` Find in Excel: ${item.searchText}` : ""}
                   </li>
                 ))}
               </ul>

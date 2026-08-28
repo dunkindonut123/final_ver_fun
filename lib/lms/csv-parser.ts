@@ -1,18 +1,41 @@
 /**
  * Lightweight RFC 4180-ish CSV parser for admin question imports.
  * Handles quoted fields with embedded commas and newlines.
+ *
+ * `excelRow` matches spreadsheet row numbers: the header is row 1, blank
+ * records (empty lines or `,,,,,,`) still increment the count, and a quoted
+ * field that contains line breaks stays a single row.
  */
+
+export interface ParsedCsvRow {
+  excelRow: number;
+  values: Record<string, string>;
+}
 
 export interface ParsedCsv {
   headers: string[];
-  rows: Record<string, string>[];
+  rows: ParsedCsvRow[];
+}
+
+function isPopulatedRecord(cells: string[]): boolean {
+  return cells.some((cell) => cell.trim().length > 0);
 }
 
 export function parseCsv(text: string): ParsedCsv {
-  const rows: string[][] = [];
+  const records: { excelRow: number; cells: string[] }[] = [];
   let current: string[] = [];
   let field = "";
   let inQuotes = false;
+  let excelRow = 0;
+
+  const finishRecord = () => {
+    excelRow += 1;
+    if (isPopulatedRecord(current)) {
+      records.push({ excelRow, cells: current });
+    }
+    current = [];
+    field = "";
+  };
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -43,22 +66,14 @@ export function parseCsv(text: string): ParsedCsv {
 
     if (char === "\n" || (char === "\r" && next === "\n")) {
       current.push(field);
-      field = "";
-      if (current.some((cell) => cell.trim().length > 0)) {
-        rows.push(current);
-      }
-      current = [];
+      finishRecord();
       if (char === "\r") i++;
       continue;
     }
 
     if (char === "\r") {
       current.push(field);
-      field = "";
-      if (current.some((cell) => cell.trim().length > 0)) {
-        rows.push(current);
-      }
-      current = [];
+      finishRecord();
       continue;
     }
 
@@ -67,23 +82,21 @@ export function parseCsv(text: string): ParsedCsv {
 
   if (field.length > 0 || current.length > 0) {
     current.push(field);
-    if (current.some((cell) => cell.trim().length > 0)) {
-      rows.push(current);
-    }
+    finishRecord();
   }
 
-  if (rows.length === 0) {
+  if (records.length === 0) {
     return { headers: [], rows: [] };
   }
 
-  const headers = rows[0].map((h) => h.trim());
-  const dataRows = rows.slice(1).map((cells) => {
-    const record: Record<string, string> = {};
+  const headers = records[0].cells.map((h) => h.trim());
+  const rows = records.slice(1).map((record) => {
+    const values: Record<string, string> = {};
     headers.forEach((header, index) => {
-      record[header] = (cells[index] ?? "").trim();
+      values[header] = (record.cells[index] ?? "").trim();
     });
-    return record;
+    return { excelRow: record.excelRow, values };
   });
 
-  return { headers, rows: dataRows };
+  return { headers, rows };
 }
