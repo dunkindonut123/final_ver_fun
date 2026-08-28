@@ -5,8 +5,9 @@
 -- Each HSK level can be 1–15 independently. After editing the TS map, copy the same
 -- numbers into chapter_counts below and re-run this file.
 --
--- Then re-run migration_v2_assignment_a_count_by_hsk.sql so new chapters get A1…An + B
--- and students at that HSK get locked student_assignments.
+-- Then re-run this file after changing chapter counts. It also inserts missing
+-- Assignment A slots + B and seeds locked student_assignments. You can still
+-- re-run migration_v2_assignment_a_count_by_hsk.sql to fully sync A-slot counts.
 --
 -- Reducing a count DELETES extra hsk_chapters rows. Cascades assignments, questions,
 -- student_assignments, attempts, chapter_materials, and chapter access/progress.
@@ -65,3 +66,43 @@ select
 from allowed al
 where (select count(*) from deleted) >= 0
 on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Seed A1…An + B for every chapter (insert missing only).
+-- Keep a_counts in sync with lib/lms/assignment-keys.ts ASSIGNMENT_A_COUNT_BY_HSK.
+-- Then seed locked student_assignments for students at that HSK.
+-- ---------------------------------------------------------------------------
+
+insert into public.assignments (chapter_id, title, order_index, assignment_key)
+select
+  c.id,
+  format('Assignment %s', keys.assignment_key),
+  keys.order_index,
+  keys.assignment_key
+from public.hsk_chapters c
+join (
+  values
+    (1, 3),
+    (2, 4),
+    (3, 4),
+    (4, 4),
+    (5, 4),
+    (6, 4),
+    (7, 4),
+    (8, 4),
+    (9, 4)
+) as ac(hsk_level, a_count) on ac.hsk_level = c.hsk_level
+cross join lateral (
+  select format('A%s', g.n)::text as assignment_key, g.n as order_index
+  from generate_series(1, ac.a_count) as g(n)
+  union all
+  select 'B', 11
+) keys
+on conflict (chapter_id, assignment_key) do nothing;
+
+insert into public.student_assignments (student_id, assignment_id, is_locked)
+select s.user_id, a.id, true
+from public.students s
+join public.hsk_chapters c on c.hsk_level = s.current_hsk_level
+join public.assignments a on a.chapter_id = c.id
+on conflict (student_id, assignment_id) do nothing;

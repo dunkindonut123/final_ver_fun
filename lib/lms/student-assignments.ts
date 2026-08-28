@@ -3,7 +3,11 @@ import {
   recordStudentAssignmentAttempt,
   type AssignmentCompletionInput,
 } from "@/lib/lms/assignment-attempts";
-import type { AssignmentKey } from "@/lib/lms/assignment-keys";
+import {
+  ASSIGNMENT_B_ORDER_INDEX,
+  assignmentKeysForHsk,
+  type AssignmentKey,
+} from "@/lib/lms/assignment-keys";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface AssignmentRow {
@@ -27,6 +31,44 @@ export interface StudentAssignmentRow {
   assignment?: AssignmentRow;
 }
 
+function orderIndexForAssignmentKey(key: AssignmentKey): number {
+  if (key === "B") return ASSIGNMENT_B_ORDER_INDEX;
+  return Number.parseInt(key.slice(1), 10);
+}
+
+/** Inserts missing A1…An + B rows for every chapter at this HSK. Does not delete extra keys. */
+export async function ensureAssignmentsForHskLevel(hskLevel: number) {
+  const admin = createAdminClient();
+  const { data: chapters, error: chaptersError } = await admin
+    .from("hsk_chapters")
+    .select("id")
+    .eq("hsk_level", hskLevel);
+
+  if (chaptersError) {
+    throw new Error(chaptersError.message);
+  }
+
+  const keys = assignmentKeysForHsk(hskLevel);
+  const rows = (chapters ?? []).flatMap((chapter) =>
+    keys.map((key) => ({
+      chapter_id: chapter.id,
+      title: `Assignment ${key}`,
+      order_index: orderIndexForAssignmentKey(key),
+      assignment_key: key,
+    }))
+  );
+
+  if (rows.length === 0) return;
+
+  const { error } = await admin.from("assignments").upsert(rows, {
+    onConflict: "chapter_id,assignment_key",
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 /** Seeds assignment rows for a student. Uses service-role only — the RPC is not executable by authenticated clients. */
 export async function seedStudentAssignments(studentId: string, hskLevel: number) {
   const admin = createAdminClient();
@@ -38,6 +80,12 @@ export async function seedStudentAssignments(studentId: string, hskLevel: number
   if (error) {
     throw new Error(error.message);
   }
+}
+
+/** Ensures chapter assignment metadata exists, then seeds this student's locked rows. */
+export async function ensureStudentHskAssignments(studentId: string, hskLevel: number) {
+  await ensureAssignmentsForHskLevel(hskLevel);
+  await seedStudentAssignments(studentId, hskLevel);
 }
 
 /** Resolves the caller's student_assignments row for a chapter + assignment key. */

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getQuestionCountsByAssignmentIds } from "@/lib/lms/assignment-questions";
 import { isAssignmentALevel, isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
+import { ensureStudentHskAssignments } from "@/lib/lms/student-assignments";
 import {
   ChapterDetailContent,
   type ChapterAssignmentItem,
@@ -82,7 +83,6 @@ export default async function StudentChapterPage({
     { data: profile },
     { data: chapter },
     { data: student },
-    assignmentQuery,
     { data: chapterMaterial },
   ] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user.id).single(),
@@ -93,18 +93,27 @@ export default async function StudentChapterPage({
       .single(),
     supabase.from("students").select("current_hsk_level").eq("user_id", user.id).single(),
     supabase
-      .from("student_assignments")
-      .select(
-        "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
-      )
-      .eq("student_id", user.id)
-      .eq("assignments.chapter_id", chapterId),
-    supabase
       .from("chapter_materials")
       .select("chapter_id, file_name")
       .eq("chapter_id", chapterId)
       .maybeSingle(),
   ]);
+
+  if (!profile || profile.role !== "student") redirect("/login");
+  if (!chapter) redirect("/student/dashboard");
+  if (!student || student.current_hsk_level !== chapter.hsk_level) {
+    redirect("/student/dashboard");
+  }
+
+  await ensureStudentHskAssignments(user.id, chapter.hsk_level);
+
+  const assignmentQuery = await supabase
+    .from("student_assignments")
+    .select(
+      "id, is_locked, is_completed, score, correct_count, total_questions, started_at, assignment:assignments!inner(id, title, order_index, assignment_key, chapter_id)"
+    )
+    .eq("student_id", user.id)
+    .eq("assignments.chapter_id", chapterId);
 
   let assignmentRows: Parameters<typeof mapAssignmentRows>[0] | null = assignmentQuery.data;
   if (assignmentQuery.error?.message?.includes("correct_count")) {
@@ -116,12 +125,6 @@ export default async function StudentChapterPage({
       .eq("student_id", user.id)
       .eq("assignments.chapter_id", chapterId);
     assignmentRows = fallback.data;
-  }
-
-  if (!profile || profile.role !== "student") redirect("/login");
-  if (!chapter) redirect("/student/dashboard");
-  if (!student || student.current_hsk_level !== chapter.hsk_level) {
-    redirect("/student/dashboard");
   }
 
   const baseAssignments = mapAssignmentRows(assignmentRows ?? []).filter((assignment) =>

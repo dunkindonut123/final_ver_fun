@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isAssignmentKeyForHsk } from "@/lib/lms/assignment-keys";
+import { ensureStudentHskAssignments } from "@/lib/lms/student-assignments";
 import { StudentDashboardContent } from "@/components/student/dashboard-content";
 
 function buildChapterProgress(
@@ -59,6 +60,8 @@ export default async function StudentDashboard() {
   }
 
   if (!studentProgress) redirect("/login");
+
+  await ensureStudentHskAssignments(user.id, studentProgress.current_hsk_level);
 
   const [{ data: teacherProfile }, { data: classroomRow }, { data: progressRows }] =
     await Promise.all([

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, ChevronRight } from "lucide-react";
 import { chapterCountForHsk, chapterIdFor } from "@/lib/lms/hsk-chapters";
+import { assignmentKeysForHsk } from "@/lib/lms/assignment-keys";
 
 interface Student {
   id: string;
@@ -73,7 +74,8 @@ export function StudentDashboardContent({ student, chapterProgress }: StudentDas
 
         <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
           {chapters.map((chapter) => {
-            const progress = chapterProgress[chapter.id] ?? { completed: 0, total: 4 };
+            const assignmentTotal = assignmentKeysForHsk(student.current_hsk_level).length;
+            const progress = chapterProgress[chapter.id] ?? { completed: 0, total: assignmentTotal };
             const isComplete = progress.completed === progress.total && progress.total > 0;
 
             return (

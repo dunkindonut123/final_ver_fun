@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StudentDetailContent } from "@/components/teacher/student-detail-content";
+import { ensureStudentHskAssignments } from "@/lib/lms/student-assignments";
 import {
   getLatestPromotionFlag,
   getStudentAssignmentToggles,
@@ -34,6 +35,8 @@ export default async function TeacherStudentPage({
     .single();
 
   if (!studentRow || studentRow.teacher_id !== user.id) redirect("/teacher/dashboard");
+
+  await ensureStudentHskAssignments(studentId, studentRow.current_hsk_level);
 
   const [{ data: studentProfile }, classroomResult, assignments, latestFlag] = await Promise.all([
     supabase.from("profiles").select("full_name, email").eq("id", studentId).single(),
