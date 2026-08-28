@@ -8,6 +8,7 @@ import { ChapterTabs } from "@/components/student/chapter-tabs";
 import { AssignmentRetryButton } from "@/components/student/assignment-retry-button";
 import { formatAAssignmentScoreDisplay } from "@/lib/lms/assignment-score-display";
 import { isAssignmentALevel } from "@/lib/mandarin-typing-questions";
+import { assignmentDisplayOrder } from "@/lib/lms/assignment-keys";
 import { ChapterMaterialViewer } from "@/components/student/chapter-material-viewer";
 import { ArrowLeft, CheckCircle2, Lock, Play } from "lucide-react";
 
@@ -96,7 +97,9 @@ export function ChapterDetailContent({
                 >
                   <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:p-5">
                     <div className="min-w-0">
-                      <p className="text-sm text-muted-foreground">Assignment {assignment.orderIndex}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Assignment {assignmentDisplayOrder(hskLevel, assignment.assignmentKey)}
+                      </p>
                       <h2 className="text-base sm:text-lg font-semibold text-foreground">{assignment.title}</h2>
                       {scoreDisplay ? (
                         <p

@@ -21,6 +21,20 @@ export const MAX_ASSIGNMENT_A_COUNT = ASSIGNMENT_A_KEYS.length;
 export const ASSIGNMENT_B_ORDER_INDEX = MAX_ASSIGNMENT_A_COUNT + 1;
 
 /**
+ * Visible sequence number for a slot. B is always last: with 3 A's it is 4, not 11.
+ * Keep DB `order_index` at ASSIGNMENT_B_ORDER_INDEX so adding A's does not shuffle B.
+ */
+export function assignmentDisplayOrder(hskLevel: number, key: string): number {
+  if (key === "B") {
+    return assignmentACountForHsk(hskLevel) + 1;
+  }
+  if (isAssignmentALevel(key)) {
+    return Number.parseInt(key.slice(1), 10);
+  }
+  return ASSIGNMENT_B_ORDER_INDEX;
+}
+
+/**
  * Number of Assignment A slots per HSK level (1–10 each, independently).
  * Change any level here, then copy the same numbers into
  * supabase/migration_v2_assignment_a_count_by_hsk.sql a_counts and re-run it.
