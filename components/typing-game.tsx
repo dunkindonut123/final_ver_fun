@@ -5,6 +5,10 @@ import Link from "next/link"
 
 import type React from "react"
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
+import {
+  isAssignmentBAnswerCorrect,
+  stripAnswerStopwords,
+} from "@/lib/mandarin-typing-questions"
 import { useStableKeyboardViewport } from "@/lib/use-stable-keyboard-viewport"
 
 type WordStatus = "pending" | "current" | "correct" | "incorrect"
@@ -83,6 +87,7 @@ export function TypingGame({
   const inputRef = useRef<HTMLInputElement>(null)
   const finishedNotifiedRef = useRef(false)
   const poolCursorRef = useRef(0)
+  const isComposingRef = useRef(false)
 
   useStableKeyboardViewport(gameState !== "finished")
 
@@ -150,6 +155,7 @@ export function TypingGame({
       correctKeystrokes: 0,
     })
     finishedNotifiedRef.current = false
+    isComposingRef.current = false
   }, [initialWordPool, takeFromPool])
 
   useEffect(() => {
@@ -197,14 +203,30 @@ export function TypingGame({
   }, [gameState])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    // IME (pinyin) uses Space/Enter to confirm candidates. Stealing those keys
+    // submits the first clause of a punctuated sentence and marks it wrong.
+    if (isComposingRef.current || e.nativeEvent.isComposing || e.key === "Process") {
+      return
+    }
+
     if (e.key === " " || e.key === "Enter") {
       e.preventDefault()
       
       if (gameState === "finished" || !input.trim()) return
 
-      const trimmedInput = input.trim()
       const currentWord = words[currentIndex]
-      const isCorrect = trimmedInput === currentWord.word
+      if (!currentWord) return
+
+      const expectedHanzi = stripAnswerStopwords(currentWord.word)
+      const typedHanzi = stripAnswerStopwords(input)
+
+      // Space after the first IME commit would otherwise submit `你好` for `你好，世界！`.
+      if (e.key === " " && typedHanzi.length < expectedHanzi.length) {
+        return
+      }
+
+      const trimmedInput = input.trim()
+      const isCorrect = isAssignmentBAnswerCorrect(trimmedInput, currentWord.word)
       const newIndex = currentIndex + 1
       const shouldShiftRows = newIndex >= VISIBLE_WORD_COUNT
 
@@ -376,6 +398,12 @@ export function TypingGame({
             type="text"
             value={input}
             onChange={handleInputChange}
+            onCompositionStart={() => {
+              isComposingRef.current = true
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false
+            }}
             onKeyDown={handleKeyDown}
             className="w-full max-w-md min-h-12 px-4 sm:px-5 py-3 sm:py-4 text-xl sm:text-2xl text-center bg-card border-2 border-border rounded-lg focus:outline-none focus:border-primary text-foreground font-semibold"
             placeholder="Answer here..."

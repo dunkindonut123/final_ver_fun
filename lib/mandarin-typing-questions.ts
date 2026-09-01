@@ -27,6 +27,14 @@ export function stripAnswerStopwords(answer: string): string {
 }
 
 /**
+ * Assignment B compares hanzi only. Punctuation/spaces are stopwords, so
+ * `你好，世界！` matches `你好世界` and ASCII `,` / `!` match fullwidth `，` / `！`.
+ */
+export function isAssignmentBAnswerCorrect(userInput: string, answerKey: string): boolean {
+	return stripAnswerStopwords(userInput) === stripAnswerStopwords(answerKey)
+}
+
+/**
  * Strip pre-filled stopwords from student input.
  * Keeps hanzi, Latin letters, digits, etc. so English and IME pinyin both work.
  */
