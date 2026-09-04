@@ -41,43 +41,60 @@ function normalizeVoiceLang(lang: string) {
   return lang.toLowerCase().replace(/_/g, "-")
 }
 
+/** Preference order — lower index wins when multiple Mandarin voices exist. */
+const MANDARIN_VOICE_PREFERENCE = [
+  "google",
+  "neural",
+  "premium",
+  "enhanced",
+  "xiaoxiao",
+  "xiaoyi",
+  "yunxi",
+  "yunyang",
+  "tingting",
+  "ting-ting",
+  "meijia",
+  "mei-jia",
+] as const
+
+const SPEECH_RATE = 0.9
+/** Browsers often drop speak() queued immediately after cancel(); a short gap avoids that. */
+const SPEAK_AFTER_CANCEL_MS = 50
+const VOICES_FALLBACK_MS = 750
+
+function isMandarinVoiceLang(lang: string) {
+  const normalized = normalizeVoiceLang(lang)
+  return (
+    normalized === "zh-cn" ||
+    normalized === "zh" ||
+    normalized.startsWith("zh-cn") ||
+    normalized.startsWith("cmn")
+  )
+}
+
 /** Prefer higher-quality Mainland Mandarin voices when the browser provides them. */
 function pickFluentMandarinVoice(
   voices: SpeechSynthesisVoice[]
 ): SpeechSynthesisVoice | undefined {
-  const mandarinVoices = voices.filter((voice) => {
-    const lang = normalizeVoiceLang(voice.lang)
-    return (
-      lang === "zh-cn" ||
-      lang === "zh" ||
-      lang.startsWith("zh-cn") ||
-      lang.startsWith("cmn")
-    )
-  })
+  const mandarinVoices = voices.filter((voice) => isMandarinVoiceLang(voice.lang))
 
-  const preferredNames = [
-    "google",
-    "neural",
-    "premium",
-    "enhanced",
-    "xiaoxiao",
-    "xiaoyi",
-    "yunxi",
-    "yunyang",
-    "tingting",
-    "ting-ting",
-    "meijia",
-    "mei-jia",
-  ]
+  let best: SpeechSynthesisVoice | undefined
+  let bestRank = Number.POSITIVE_INFINITY
 
-  const preferred = mandarinVoices.find((voice) => {
+  for (const voice of mandarinVoices) {
     const name = voice.name.toLowerCase()
-    return preferredNames.some((token) => name.includes(token))
-  })
+    const rank = MANDARIN_VOICE_PREFERENCE.findIndex((token) => name.includes(token))
+    if (rank >= 0 && rank < bestRank) {
+      best = voice
+      bestRank = rank
+    }
+  }
 
   return (
-    preferred ??
-    mandarinVoices.find((voice) => normalizeVoiceLang(voice.lang).startsWith("zh-cn")) ??
+    best ??
+    mandarinVoices.find((voice) =>
+      normalizeVoiceLang(voice.lang).startsWith("zh-cn")
+    ) ??
     mandarinVoices[0] ??
     voices.find((voice) => normalizeVoiceLang(voice.lang).startsWith("zh"))
   )
@@ -106,6 +123,11 @@ export function MandarinTypingGame({
   const scoreRef = useRef(0)
   const lastAutoPlayedKeyRef = useRef<string | null>(null)
   const isComposingRef = useRef(false)
+  /** After the first Hear Pronunciation tap, question-change autoplay is allowed. */
+  const speechUnlockedRef = useRef(false)
+  const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const voicesFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const voicesChangedHandlerRef = useRef<(() => void) | null>(null)
   const [autoPlayNonce, setAutoPlayNonce] = useState(0)
 
   // Keep assignment UI from jumping when the mobile keyboard opens.
@@ -141,53 +163,116 @@ export function MandarinTypingGame({
     [expectedHanziLength]
   )
 
-  const playPronunciation = useCallback((text: string) => {
-    if (typeof window === "undefined" || !text) {
-      return
+  const clearPendingSpeechWork = useCallback(() => {
+    if (speakTimeoutRef.current) {
+      clearTimeout(speakTimeoutRef.current)
+      speakTimeoutRef.current = null
     }
+    if (voicesFallbackTimeoutRef.current) {
+      clearTimeout(voicesFallbackTimeoutRef.current)
+      voicesFallbackTimeoutRef.current = null
+    }
+    if (voicesChangedHandlerRef.current) {
+      window.speechSynthesis.removeEventListener(
+        "voiceschanged",
+        voicesChangedHandlerRef.current
+      )
+      voicesChangedHandlerRef.current = null
+    }
+  }, [])
 
-    const speak = (voices: SpeechSynthesisVoice[]) => {
-      window.speechSynthesis.cancel()
-
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = "zh-CN"
-      // Slower than default so tones and syllables stay clear for learners.
-      utterance.rate = 0.3
-      utterance.pitch = 1
-      utterance.volume = 1
-
-      const chineseVoice = pickFluentMandarinVoice(voices)
-      if (chineseVoice) {
-        utterance.voice = chineseVoice
-        utterance.lang = chineseVoice.lang
+  const playPronunciation = useCallback(
+    (text: string) => {
+      if (typeof window === "undefined" || !text) {
+        return
       }
 
-      window.speechSynthesis.speak(utterance)
-    }
+      // Punctuation/spaces confuse compact TTS engines; speak hanzi only.
+      const speakText = stripAnswerStopwords(text)
+      if (!speakText) {
+        return
+      }
 
-    const voices = window.speechSynthesis.getVoices()
-    if (voices.length > 0) {
-      speak(voices)
-      return
-    }
+      clearPendingSpeechWork()
 
-    // Chrome often loads voices asynchronously on first use.
-    const onVoicesChanged = () => {
-      window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged)
-      speak(window.speechSynthesis.getVoices())
+      const speakWithVoices = (voices: SpeechSynthesisVoice[]) => {
+        window.speechSynthesis.cancel()
+
+        speakTimeoutRef.current = setTimeout(() => {
+          speakTimeoutRef.current = null
+
+          const utterance = new SpeechSynthesisUtterance(speakText)
+          utterance.lang = "zh-CN"
+          // Near-natural rate: far below ~0.8, basic voices time-stretch and warble.
+          utterance.rate = SPEECH_RATE
+          utterance.pitch = 1
+          utterance.volume = 1
+
+          const chineseVoice = pickFluentMandarinVoice(voices)
+          if (chineseVoice) {
+            utterance.voice = chineseVoice
+            utterance.lang = chineseVoice.lang
+          }
+
+          window.speechSynthesis.speak(utterance)
+        }, SPEAK_AFTER_CANCEL_MS)
+      }
+
+      const voices = window.speechSynthesis.getVoices()
+      if (pickFluentMandarinVoice(voices)) {
+        speakWithVoices(voices)
+        return
+      }
+
+      // Chrome may return [] or a non-Chinese list before voiceschanged.
+      const onVoicesChanged = () => {
+        const nextVoices = window.speechSynthesis.getVoices()
+        if (!pickFluentMandarinVoice(nextVoices) && nextVoices.length === 0) {
+          return
+        }
+        clearPendingSpeechWork()
+        speakWithVoices(nextVoices)
+      }
+      voicesChangedHandlerRef.current = onVoicesChanged
+      window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged)
+
+      voicesFallbackTimeoutRef.current = setTimeout(() => {
+        voicesFallbackTimeoutRef.current = null
+        if (voicesChangedHandlerRef.current) {
+          window.speechSynthesis.removeEventListener(
+            "voiceschanged",
+            voicesChangedHandlerRef.current
+          )
+          voicesChangedHandlerRef.current = null
+        }
+        speakWithVoices(window.speechSynthesis.getVoices())
+      }, VOICES_FALLBACK_MS)
+    },
+    [clearPendingSpeechWork]
+  )
+
+  useEffect(() => {
+    return () => {
+      clearPendingSpeechWork()
     }
-    window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged)
-  }, [])
+  }, [clearPendingSpeechWork])
 
   const handlePlayHint = () => {
     if (!currentQuestion?.answer) {
       return
     }
+    // First tap unlocks autoplay for later questions (iOS/gesture gate).
+    speechUnlockedRef.current = true
     playPronunciation(currentQuestion.answer)
   }
 
   useEffect(() => {
     if (gameState !== "playing") {
+      return
+    }
+
+    // Skip mount autoplay until speech is unlocked by a user gesture.
+    if (!speechUnlockedRef.current) {
       return
     }
 
@@ -248,6 +333,7 @@ export function MandarinTypingGame({
   }
 
   const restartGame = () => {
+    clearPendingSpeechWork()
     window.speechSynthesis.cancel()
     setCurrentQuestionIndex(0)
     setInputValue("")
