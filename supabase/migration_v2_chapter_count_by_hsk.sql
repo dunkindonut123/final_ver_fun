@@ -21,7 +21,7 @@ alter table public.hsk_chapters
 
 alter table public.hsk_chapters
   add constraint hsk_chapters_chapter_number_check
-  check (chapter_number between 1 and 15);
+  check (chapter_number between 1 and 20);
 
 -- ---------------------------------------------------------------------------
 -- One VALUES list drives both delete and insert (any mix of 1–15 chapters per HSK)
@@ -31,7 +31,7 @@ with chapter_counts(hsk_level, chapter_count) as (
   values
     (1, 15),
     (2, 15),
-    (3, 15),
+    (3, 18),
     (4, 15),
     (5, 15),
     (6, 15),

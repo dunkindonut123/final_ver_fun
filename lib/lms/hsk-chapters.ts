@@ -1,6 +1,6 @@
 import { HSK_LEVELS, isValidHskLevel } from "@/lib/lms/hsk-levels";
 
-export const MAX_CHAPTER_COUNT = 15;
+export const MAX_CHAPTER_COUNT = 20;
 
 /**
  * Number of chapters per HSK level (1–15 each, independently).
@@ -12,7 +12,7 @@ export const MAX_CHAPTER_COUNT = 15;
 export const CHAPTER_COUNT_BY_HSK: Record<number, number> = {
   1: 15,
   2: 15,
-  3: 15,
+  3: 18,
   4: 15,
   5: 15,
   6: 15,
