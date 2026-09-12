@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type MandarinTypingQuestion } from "@/lib/mandarin-typing-questions";
+import { questionAudioPublicUrl } from "@/lib/lms/question-audio";
 import type { ParsedCsvRow } from "@/lib/lms/csv-parser";
 import { isValidHskLevel, hskLevelRangeLabel, HSK_LEVELS } from "@/lib/lms/hsk-levels";
 import { chapterCountForHsk, isChapterIdForHsk } from "@/lib/lms/hsk-chapters";
@@ -35,6 +36,7 @@ export interface AssignmentQuestionRow {
   answer: string;
   pinyin_hint: string | null;
   meaning_hint: string | null;
+  audio_path?: string | null;
 }
 
 export interface ParsedQuestionCsvRow {
@@ -111,6 +113,7 @@ export function toMandarinTypingQuestions(
       answer: row.answer,
       meaningHintId: row.meaning_hint ?? "",
       pinyinHint: row.pinyin_hint ?? "",
+      audioUrl: questionAudioPublicUrl(row.audio_path),
     }));
 }
 
@@ -173,6 +176,7 @@ export async function getQuestionsForAssignment(
       answer,
       pinyin_hint,
       meaning_hint,
+      audio_path,
       assignment:assignments!inner(chapter_id, assignment_key)
     `
     )

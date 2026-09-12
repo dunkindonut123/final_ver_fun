@@ -58,9 +58,8 @@ const MANDARIN_VOICE_PREFERENCE = [
 ] as const
 
 const SPEECH_RATE = 0.9
-/** Browsers often drop speak() queued immediately after cancel(); a short gap avoids that. */
+/** Chrome can drop speak() queued in the same tick as cancel(); retry once. */
 const SPEAK_AFTER_CANCEL_MS = 50
-const VOICES_FALLBACK_MS = 750
 
 function isMandarinVoiceLang(lang: string) {
   const normalized = normalizeVoiceLang(lang)
@@ -126,8 +125,10 @@ export function MandarinTypingGame({
   /** After the first Hear Pronunciation tap, question-change autoplay is allowed. */
   const speechUnlockedRef = useRef(false)
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const voicesFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const voicesChangedHandlerRef = useRef<(() => void) | null>(null)
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([])
+  /** Chrome garbage-collects utterances held only in locals, then plays nothing. */
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [autoPlayNonce, setAutoPlayNonce] = useState(0)
 
   // Keep assignment UI from jumping when the mobile keyboard opens.
@@ -168,22 +169,11 @@ export function MandarinTypingGame({
       clearTimeout(speakTimeoutRef.current)
       speakTimeoutRef.current = null
     }
-    if (voicesFallbackTimeoutRef.current) {
-      clearTimeout(voicesFallbackTimeoutRef.current)
-      voicesFallbackTimeoutRef.current = null
-    }
-    if (voicesChangedHandlerRef.current) {
-      window.speechSynthesis.removeEventListener(
-        "voiceschanged",
-        voicesChangedHandlerRef.current
-      )
-      voicesChangedHandlerRef.current = null
-    }
   }, [])
 
-  const playPronunciation = useCallback(
+  const speakOnDevice = useCallback(
     (text: string) => {
-      if (typeof window === "undefined" || !text) {
+      if (typeof window === "undefined" || !window.speechSynthesis) {
         return
       }
 
@@ -195,75 +185,100 @@ export function MandarinTypingGame({
 
       clearPendingSpeechWork()
 
-      const speakWithVoices = (voices: SpeechSynthesisVoice[]) => {
-        window.speechSynthesis.cancel()
+      const voices =
+        voicesRef.current.length > 0
+          ? voicesRef.current
+          : window.speechSynthesis.getVoices()
 
+      const utterance = new SpeechSynthesisUtterance(speakText)
+      utterance.lang = "zh-CN"
+      // Near-natural rate: far below ~0.8, basic voices time-stretch and warble.
+      utterance.rate = SPEECH_RATE
+      utterance.pitch = 1
+      utterance.volume = 1
+
+      const chineseVoice = pickFluentMandarinVoice(voices)
+      if (chineseVoice) {
+        utterance.voice = chineseVoice
+        utterance.lang = chineseVoice.lang
+      }
+
+      const wasQueued =
+        window.speechSynthesis.speaking || window.speechSynthesis.pending
+      if (wasQueued) {
+        window.speechSynthesis.cancel()
+      }
+
+      // iOS only honours speak() in the same turn as the tap, so never defer
+      // the call itself — a delayed speak() is dropped without an error.
+      utteranceRef.current = utterance
+      window.speechSynthesis.speak(utterance)
+
+      if (wasQueued) {
         speakTimeoutRef.current = setTimeout(() => {
           speakTimeoutRef.current = null
-
-          const utterance = new SpeechSynthesisUtterance(speakText)
-          utterance.lang = "zh-CN"
-          // Near-natural rate: far below ~0.8, basic voices time-stretch and warble.
-          utterance.rate = SPEECH_RATE
-          utterance.pitch = 1
-          utterance.volume = 1
-
-          const chineseVoice = pickFluentMandarinVoice(voices)
-          if (chineseVoice) {
-            utterance.voice = chineseVoice
-            utterance.lang = chineseVoice.lang
+          if (
+            utteranceRef.current === utterance &&
+            !window.speechSynthesis.speaking &&
+            !window.speechSynthesis.pending
+          ) {
+            window.speechSynthesis.speak(utterance)
           }
-
-          window.speechSynthesis.speak(utterance)
         }, SPEAK_AFTER_CANCEL_MS)
       }
-
-      const voices = window.speechSynthesis.getVoices()
-      if (pickFluentMandarinVoice(voices)) {
-        speakWithVoices(voices)
-        return
-      }
-
-      // Chrome may return [] or a non-Chinese list before voiceschanged.
-      const onVoicesChanged = () => {
-        const nextVoices = window.speechSynthesis.getVoices()
-        if (!pickFluentMandarinVoice(nextVoices) && nextVoices.length === 0) {
-          return
-        }
-        clearPendingSpeechWork()
-        speakWithVoices(nextVoices)
-      }
-      voicesChangedHandlerRef.current = onVoicesChanged
-      window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged)
-
-      voicesFallbackTimeoutRef.current = setTimeout(() => {
-        voicesFallbackTimeoutRef.current = null
-        if (voicesChangedHandlerRef.current) {
-          window.speechSynthesis.removeEventListener(
-            "voiceschanged",
-            voicesChangedHandlerRef.current
-          )
-          voicesChangedHandlerRef.current = null
-        }
-        speakWithVoices(window.speechSynthesis.getVoices())
-      }, VOICES_FALLBACK_MS)
     },
     [clearPendingSpeechWork]
   )
 
+  const playPronunciation = useCallback(
+    (question: MandarinTypingQuestion) => {
+      if (!question.answer) {
+        return
+      }
+
+      const audio = audioRef.current
+      if (question.audioUrl && audio) {
+        clearPendingSpeechWork()
+        window.speechSynthesis?.cancel()
+        // Safari rejects currentTime writes before metadata is loaded.
+        if (audio.readyState > 0 && audio.currentTime > 0) {
+          audio.currentTime = 0
+        }
+        // A blocked or missing file must not leave the hint silent.
+        void audio.play().catch(() => speakOnDevice(question.answer))
+        return
+      }
+
+      speakOnDevice(question.answer)
+    },
+    [clearPendingSpeechWork, speakOnDevice]
+  )
+
   useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      return
+    }
+
+    // Chrome populates the voice list asynchronously after first load.
+    const refreshVoices = () => {
+      voicesRef.current = window.speechSynthesis.getVoices()
+    }
+    refreshVoices()
+    window.speechSynthesis.addEventListener("voiceschanged", refreshVoices)
+
     return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", refreshVoices)
       clearPendingSpeechWork()
     }
   }, [clearPendingSpeechWork])
 
   const handlePlayHint = () => {
-    if (!currentQuestion?.answer) {
+    if (!currentQuestion) {
       return
     }
     // First tap unlocks autoplay for later questions (iOS/gesture gate).
     speechUnlockedRef.current = true
-    playPronunciation(currentQuestion.answer)
+    playPronunciation(currentQuestion)
   }
 
   useEffect(() => {
@@ -287,7 +302,7 @@ export function MandarinTypingGame({
     }
     lastAutoPlayedKeyRef.current = autoPlayKey
 
-    playPronunciation(question.answer)
+    playPronunciation(question)
   }, [autoPlayNonce, currentQuestionIndex, gameState, playPronunciation, questions])
 
   useEffect(() => {
@@ -334,7 +349,8 @@ export function MandarinTypingGame({
 
   const restartGame = () => {
     clearPendingSpeechWork()
-    window.speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
+    audioRef.current?.pause()
     setCurrentQuestionIndex(0)
     setInputValue("")
     scoreRef.current = 0
@@ -558,6 +574,14 @@ export function MandarinTypingGame({
             <Volume2 className="h-4 w-4" />
             Hear Pronunciation
           </button>
+          {currentQuestion.audioUrl ? (
+            <audio
+              ref={audioRef}
+              src={currentQuestion.audioUrl}
+              preload="auto"
+              className="hidden"
+            />
+          ) : null}
         </div>
 
         {/* Flex-wrap keeps slot size readable; long answers wrap instead of crushing */}
