@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminPageHeader } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,9 @@ import {
 } from "@/lib/lms/assignment-questions";
 import { chapterCountLegend } from "@/lib/lms/hsk-chapters";
 import { parseCsv } from "@/lib/lms/csv-parser";
-import { Download, Loader2, Upload } from "lucide-react";
+import { Download, Loader2, Upload, Volume2 } from "lucide-react";
+
+const AUDIO_ENDPOINT = "/api/admin/questions/generate-audio";
 
 interface CsvValidationError {
   row: number;
@@ -22,6 +24,13 @@ interface CsvValidationError {
   message: string;
   locator?: string;
   searchText?: string;
+}
+
+interface AudioStatus {
+  total: number;
+  missing: number;
+  perLevel: { hskLevel: number; missing: number }[];
+  configured: boolean;
 }
 
 function downloadTextFile(filename: string, content: string) {
@@ -42,8 +51,79 @@ export function AdminQuestionsContent() {
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [audioStatus, setAudioStatus] = useState<AudioStatus | null>(null);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [audioMessage, setAudioMessage] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   const previewRows = useMemo(() => preview.slice(0, 10), [preview]);
+
+  const loadAudioStatus = useCallback(async () => {
+    const response = await fetch(AUDIO_ENDPOINT);
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setAudioError(payload.error ?? "Could not load audio coverage.");
+      return;
+    }
+
+    setAudioStatus(payload as AudioStatus);
+  }, []);
+
+  useEffect(() => {
+    void loadAudioStatus();
+  }, [loadAudioStatus]);
+
+  /** Each call handles a bounded batch, so loop until nothing is missing. */
+  const handleGenerateAudio = async () => {
+    setGeneratingAudio(true);
+    setAudioError(null);
+    setAudioMessage(null);
+
+    let generated = 0;
+    let reused = 0;
+    let failed = 0;
+
+    try {
+      for (;;) {
+        const response = await fetch(AUDIO_ENDPOINT, { method: "POST" });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          setAudioError(payload.error ?? "Audio generation failed.");
+          break;
+        }
+
+        generated += payload.generated ?? 0;
+        reused += payload.reused ?? 0;
+        failed += payload.failed ?? 0;
+
+        if (payload.remaining === 0) {
+          setAudioMessage(
+            `Done. Generated ${generated}, reused ${reused}${failed > 0 ? `, ${failed} failed` : ""}.`
+          );
+          break;
+        }
+
+        // Nothing succeeded in that batch: stop instead of looping forever.
+        if ((payload.generated ?? 0) + (payload.reused ?? 0) === 0) {
+          setAudioError(payload.errors?.[0] ?? "The last batch made no progress.");
+          break;
+        }
+
+        setAudioMessage(
+          `Generated ${generated}, reused ${reused}. ${payload.remaining} remaining...`
+        );
+      }
+    } catch (requestError) {
+      setAudioError(
+        requestError instanceof Error ? requestError.message : "Audio generation failed."
+      );
+    } finally {
+      setGeneratingAudio(false);
+      await loadAudioStatus();
+    }
+  };
 
   const handleFileChange = async (nextFile: File | null) => {
     setFile(nextFile);
@@ -202,6 +282,62 @@ export function AdminQuestionsContent() {
           >
             {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
             Import questions
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 rounded-2xl border border-white/20 bg-background/75 shadow-lg shadow-foreground/5">
+        <CardContent className="space-y-4 p-5">
+          <div>
+            <p className="text-sm font-medium text-foreground">Pronunciation audio</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Assignment A answers are synthesized once with Google Cloud TTS and stored, so every student hears the
+              same audio. Questions without a file fall back to the student device&apos;s own voice. Run this after every
+              CSV import.
+            </p>
+          </div>
+
+          {audioStatus ? (
+            <div className="space-y-2">
+              <p className="text-sm text-foreground">
+                {audioStatus.missing === 0
+                  ? `All ${audioStatus.total} Assignment A question(s) have audio.`
+                  : `${audioStatus.missing} of ${audioStatus.total} Assignment A question(s) are missing audio.`}
+              </p>
+              {audioStatus.perLevel.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Missing by level:{" "}
+                  {audioStatus.perLevel
+                    .map((entry) => `HSK ${entry.hskLevel} (${entry.missing})`)
+                    .join(", ")}
+                </p>
+              ) : null}
+              {!audioStatus.configured ? (
+                <p className="text-xs text-amber-600">
+                  GOOGLE_TTS_CREDENTIALS_B64 is not set in this environment, so generation will fail.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Loading coverage...</p>
+          )}
+
+          {audioError ? <p className="text-sm text-red-600">{audioError}</p> : null}
+          {audioMessage ? <p className="text-sm text-emerald-600">{audioMessage}</p> : null}
+
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl"
+            disabled={generatingAudio || !audioStatus || audioStatus.missing === 0}
+            onClick={() => void handleGenerateAudio()}
+          >
+            {generatingAudio ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Volume2 className="mr-2 h-4 w-4" />
+            )}
+            Generate missing audio
           </Button>
         </CardContent>
       </Card>

@@ -6,6 +6,8 @@ export interface MandarinTypingQuestion {
 	answer: string
 	meaningHintId: string
 	pinyinHint: string
+	/** Pre-generated pronunciation file; null falls back to device speech. */
+	audioUrl: string | null
 }
 
 /** Punctuation/symbols/spaces that are pre-filled; students only type the rest. */

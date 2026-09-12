@@ -56,7 +56,8 @@ export default async function StudentAssignmentPage({
             question_order,
             answer,
             pinyin_hint,
-            meaning_hint
+            meaning_hint,
+            audio_path
           )
         )
       `
