@@ -19,7 +19,9 @@ interface WordState {
   userInput: string
 }
 
-const GAME_DURATION = 180
+
+const GAME_DURATION = 240
+
 const WORDS_PER_ROW = 9
 const VISIBLE_WORD_COUNT = WORDS_PER_ROW * 2
 

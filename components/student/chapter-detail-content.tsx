@@ -107,7 +107,7 @@ export function ChapterDetailContent({
                             assignment.status === "completed" ? "text-emerald-600" : "text-muted-foreground"
                           }`}
                         >
-                          {assignment.status === "completed" ? "Score" : "Last score"}: {scoreDisplay}
+                          Score: {scoreDisplay}
                         </p>
                       ) : assignment.status === "in_progress" ? (
                         <p className="mt-1 text-sm text-amber-600">In progress</p>

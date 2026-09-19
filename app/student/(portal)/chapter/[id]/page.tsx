@@ -39,9 +39,10 @@ function mapAssignmentRows(
       const assignment = Array.isArray(row.assignment) ? row.assignment[0] : row.assignment;
       if (!assignment) return null;
 
+      const hasCompletedOnce = row.is_completed || typeof row.score === "number";
       const status: AssignmentStatus = row.is_locked
         ? "locked"
-        : row.is_completed
+        : hasCompletedOnce
           ? "completed"
           : row.started_at
             ? "in_progress"
@@ -54,7 +55,7 @@ function mapAssignmentRows(
         orderIndex: assignment.order_index,
         assignmentKey: assignment.assignment_key,
         isLocked: row.is_locked,
-        isCompleted: row.is_completed,
+        isCompleted: hasCompletedOnce,
         score: row.score,
         correctCount: row.correct_count ?? null,
         totalQuestions: row.total_questions ?? null,

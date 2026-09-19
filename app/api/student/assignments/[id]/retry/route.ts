@@ -19,7 +19,7 @@ export async function PATCH(
 
     const { data: row, error: fetchError } = await supabase
       .from("student_assignments")
-      .select("id, student_id, is_locked, is_completed")
+      .select("id, student_id, is_locked, is_completed, score")
       .eq("id", studentAssignmentId)
       .single();
 
@@ -35,7 +35,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Assignment is locked." }, { status: 403 });
     }
 
-    if (!row.is_completed) {
+    // Allow retry after any prior completion (score retained even if is_completed was cleared).
+    if (!row.is_completed && row.score === null) {
       return NextResponse.json({ error: "Assignment is not completed." }, { status: 400 });
     }
 

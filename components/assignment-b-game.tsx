@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useCallback, useState } from "react"
+import { useRouter } from "next/navigation"
 import { TypingGame } from "@/components/typing-game"
 import { QuestionsUnavailable } from "@/components/student/questions-unavailable"
 import { assignmentBScoreFromMetrics } from "@/lib/lms/student-assignments"
@@ -17,6 +18,7 @@ export function AssignmentBGame({
   initialWordPool,
   returnHref,
 }: AssignmentBGameProps) {
+  const router = useRouter()
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -53,12 +55,13 @@ export function AssignmentBGame({
 
         setSaveState("saved")
         setSaveMessage("Assignment successfully saved.")
+        router.refresh()
       } catch {
         setSaveState("error")
         setSaveMessage("Failed to save assignment progress.")
       }
     },
-    [studentAssignmentId]
+    [router, studentAssignmentId]
   )
 
   if (!initialWordPool?.length) {

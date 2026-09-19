@@ -36,9 +36,13 @@ export async function GET(
       return NextResponse.json({ error: "You do not manage this student." }, { status: 403 });
     }
 
-    const attempts = await getAttemptsForStudentAssignment(auth.ctx.db, studentAssignmentId, 5);
+    const { attempts, totalCount } = await getAttemptsForStudentAssignment(
+      auth.ctx.db,
+      studentAssignmentId,
+      20
+    );
 
-    return NextResponse.json({ attempts });
+    return NextResponse.json({ attempts, totalCount });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected server error";
     return NextResponse.json({ error: message }, { status: 500 });
