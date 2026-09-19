@@ -56,7 +56,7 @@ export function StudentDetailContent({
   const [flagSubmitting, setFlagSubmitting] = useState(false);
   const [expandedAssignmentId, setExpandedAssignmentId] = useState<string | null>(null);
   const [attemptsByAssignment, setAttemptsByAssignment] = useState<
-    Record<string, AssignmentAttemptItem[]>
+    Record<string, { attempts: AssignmentAttemptItem[]; totalCount: number }>
   >({});
   const [loadingAttemptsId, setLoadingAttemptsId] = useState<string | null>(null);
 
@@ -100,14 +100,20 @@ export function StudentDetailContent({
         `/api/teacher/assignments/${studentAssignmentId}/attempt-history`
       );
       if (!response.ok) {
-        setAttemptsByAssignment((current) => ({ ...current, [studentAssignmentId]: [] }));
+        setAttemptsByAssignment((current) => ({
+          ...current,
+          [studentAssignmentId]: { attempts: [], totalCount: 0 },
+        }));
         return;
       }
 
       const payload = await response.json();
       setAttemptsByAssignment((current) => ({
         ...current,
-        [studentAssignmentId]: payload.attempts ?? [],
+        [studentAssignmentId]: {
+          attempts: payload.attempts ?? [],
+          totalCount: typeof payload.totalCount === "number" ? payload.totalCount : payload.attempts?.length ?? 0,
+        },
       }));
     } finally {
       setLoadingAttemptsId(null);
@@ -121,9 +127,9 @@ export function StudentDetailContent({
     }
 
     setExpandedAssignmentId(studentAssignmentId);
-    if (!attemptsByAssignment[studentAssignmentId]) {
-      void loadAssignmentAttempts(studentAssignmentId);
-    }
+    // Refresh summary scores + always refetch history so the newest attempt appears.
+    router.refresh();
+    void loadAssignmentAttempts(studentAssignmentId);
   };
 
   const toggleLock = async (studentAssignmentId: string) => {
@@ -344,7 +350,9 @@ export function StudentDetailContent({
                   <div className="divide-y">
                     {chapterAssignments.map((assignment) => {
                       const isExpanded = expandedAssignmentId === assignment.studentAssignmentId;
-                      const attempts = attemptsByAssignment[assignment.studentAssignmentId] ?? [];
+                      const history = attemptsByAssignment[assignment.studentAssignmentId];
+                      const attempts = history?.attempts ?? [];
+                      const totalAttemptCount = history?.totalCount ?? attempts.length;
                       const isLoadingAttempts =
                         loadingAttemptsId === assignment.studentAssignmentId;
 
@@ -412,7 +420,7 @@ export function StudentDetailContent({
                                       className="flex items-center justify-between gap-3 rounded-lg bg-background/80 px-3 py-2 text-sm"
                                     >
                                       <span className="text-muted-foreground">
-                                        Attempt {attempts.length - index}
+                                        Attempt {totalAttemptCount - index}
                                       </span>
                                       <div className="text-right">
                                         <p className="font-semibold text-foreground">

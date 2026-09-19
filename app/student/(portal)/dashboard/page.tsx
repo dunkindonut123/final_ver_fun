@@ -7,6 +7,7 @@ import { StudentDashboardContent } from "@/components/student/dashboard-content"
 function buildChapterProgress(
   rows: {
     is_completed: boolean;
+    score?: number | null;
     assignment:
       | { chapter_id: string; assignment_key?: string }
       | { chapter_id: string; assignment_key?: string }[]
@@ -25,7 +26,7 @@ function buildChapterProgress(
 
     const current = progress[chapterId] ?? { completed: 0, total: 0 };
     current.total += 1;
-    if (row.is_completed) current.completed += 1;
+    if (row.is_completed || typeof row.score === "number") current.completed += 1;
     progress[chapterId] = current;
   }
 
@@ -81,7 +82,7 @@ export default async function StudentDashboard() {
         : Promise.resolve({ data: null }),
       supabase
         .from("student_assignments")
-        .select("is_completed, assignment:assignments(chapter_id, assignment_key)")
+        .select("is_completed, score, assignment:assignments(chapter_id, assignment_key)")
         .eq("student_id", user.id),
     ]);
 

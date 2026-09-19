@@ -125,7 +125,8 @@ export async function getStudentAssignmentToggles(
         chapter?.chapter_number ??
         Number.parseInt(assignment.chapter_id.match(/-ch(\d+)$/)?.[1] ?? "0", 10);
 
-      const status: AssignmentStatus = row.is_completed
+      const hasCompletedOnce = row.is_completed || typeof row.score === "number";
+      const status: AssignmentStatus = hasCompletedOnce
         ? "completed"
         : row.started_at
           ? "in_progress"
@@ -141,7 +142,7 @@ export async function getStudentAssignmentToggles(
         chapterNumber,
         chapterTitle,
         isLocked: row.is_locked,
-        isCompleted: row.is_completed,
+        isCompleted: hasCompletedOnce,
         score: row.score,
         correctCount: row.correct_count ?? null,
         totalQuestions: row.total_questions ?? null,

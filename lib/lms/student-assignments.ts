@@ -124,11 +124,19 @@ export async function findStudentAssignmentForChapterKey(
   return data;
 }
 
+export interface AssignmentCompletionResult {
+  score: number;
+  correctCount: number | null;
+  totalQuestions: number | null;
+  completedAt: string;
+  attemptId: string;
+}
+
 export async function completeStudentAssignment(
   supabase: SupabaseClient,
   studentAssignmentId: string,
   input: AssignmentCompletionInput
-) {
+): Promise<AssignmentCompletionResult> {
   const { data: existing, error: fetchError } = await supabase
     .from("student_assignments")
     .select("started_at")
@@ -146,7 +154,7 @@ export async function completeStudentAssignment(
     typeof input.totalQuestions === "number" ? Math.max(1, Math.round(input.totalQuestions)) : null;
   const completedAt = new Date().toISOString();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("student_assignments")
     .update({
       is_completed: true,
@@ -155,13 +163,19 @@ export async function completeStudentAssignment(
       total_questions: totalQuestions,
       completed_at: completedAt,
     })
-    .eq("id", studentAssignmentId);
+    .eq("id", studentAssignmentId)
+    .select("id, score, correct_count, total_questions, completed_at")
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  await recordStudentAssignmentAttempt(
+  if (!updated) {
+    throw new Error("Assignment progress was not updated.");
+  }
+
+  const attempt = await recordStudentAssignmentAttempt(
     supabase,
     studentAssignmentId,
     {
@@ -171,23 +185,36 @@ export async function completeStudentAssignment(
     },
     existing?.started_at ?? null
   );
+
+  return {
+    score: updated.score,
+    correctCount: updated.correct_count,
+    totalQuestions: updated.total_questions,
+    completedAt: updated.completed_at ?? completedAt,
+    attemptId: attempt.id,
+  };
 }
 
+/** Prepares a new run while keeping the assignment marked completed (latest score stays until overwritten). */
 export async function retryStudentAssignment(
   supabase: SupabaseClient,
   studentAssignmentId: string
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("student_assignments")
     .update({
-      is_completed: false,
       started_at: null,
-      completed_at: null,
     })
-    .eq("id", studentAssignmentId);
+    .eq("id", studentAssignmentId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Assignment retry was not applied.");
   }
 }
 

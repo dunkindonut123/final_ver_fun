@@ -65,13 +65,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Assignment is locked." }, { status: 403 });
     }
 
-    await completeStudentAssignment(supabase, studentAssignmentId, {
+    const result = await completeStudentAssignment(supabase, studentAssignmentId, {
       score,
       correctCount,
       totalQuestions,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected server error";
     return NextResponse.json({ error: message }, { status: 500 });

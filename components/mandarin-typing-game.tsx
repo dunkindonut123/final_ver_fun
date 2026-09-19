@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Home, RotateCcw, Volume2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import {
@@ -107,6 +108,7 @@ export function MandarinTypingGame({
   returnHref = "/student/dashboard",
   initialQuestions,
 }: MandarinTypingGameProps) {
+  const router = useRouter()
   const questions = useMemo(() => initialQuestions ?? [], [initialQuestions])
   const totalQuestions = questions.length
 
@@ -118,8 +120,11 @@ export function MandarinTypingGame({
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null)
   const [saveState, setSaveState] = useState<SaveState>("idle")
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const scoreRef = useRef(0)
+  const saveGenerationRef = useRef(0)
+  const persistInFlightRef = useRef(false)
   const lastAutoPlayedKeyRef = useRef<string | null>(null)
   const isComposingRef = useRef(false)
   /** After the first Hear Pronunciation tap, question-change autoplay is allowed. */
@@ -331,23 +336,7 @@ export function MandarinTypingGame({
     }
   }
 
-  const goToNextQuestion = () => {
-    if (currentQuestionIndex + 1 >= totalQuestions) {
-      if (saveState === "idle") {
-        void persistAssignmentCompletion(scoreRef.current)
-      }
-      setGameState("finished")
-      return
-    }
-
-    setCurrentQuestionIndex((prev) => prev + 1)
-    setInputValue("")
-    setAnswerSubmitted(false)
-    setLastAnswerCorrect(null)
-    inputRef.current?.focus({ preventScroll: true })
-  }
-
-  const restartGame = () => {
+  const resetLocalGame = useCallback(() => {
     clearPendingSpeechWork()
     window.speechSynthesis?.cancel()
     audioRef.current?.pause()
@@ -360,9 +349,10 @@ export function MandarinTypingGame({
     setLastAnswerCorrect(null)
     setSaveState("idle")
     setSaveMessage(null)
+    persistInFlightRef.current = false
     setAutoPlayNonce((prev) => prev + 1)
     inputRef.current?.focus({ preventScroll: true })
-  }
+  }, [clearPendingSpeechWork])
 
   const persistAssignmentCompletion = useCallback(async (finalCorrectCount?: number) => {
     if (!chapterId && !studentAssignmentId) {
@@ -370,6 +360,12 @@ export function MandarinTypingGame({
       return
     }
 
+    if (persistInFlightRef.current) {
+      return
+    }
+
+    const generation = ++saveGenerationRef.current
+    persistInFlightRef.current = true
     setSaveState("saving")
     setSaveMessage(null)
 
@@ -388,6 +384,10 @@ export function MandarinTypingGame({
           }),
         })
 
+        if (generation !== saveGenerationRef.current) {
+          return
+        }
+
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}))
           setSaveState("error")
@@ -397,6 +397,7 @@ export function MandarinTypingGame({
 
         setSaveState("saved")
         setSaveMessage("Assignment successfully saved.")
+        router.refresh()
         return
       }
 
@@ -467,10 +468,60 @@ export function MandarinTypingGame({
       setSaveState("saved")
       setSaveMessage("Assignment successfully saved.")
     } catch {
+      if (generation !== saveGenerationRef.current) {
+        return
+      }
       setSaveState("error")
       setSaveMessage("Failed to save assignment progress.")
+    } finally {
+      if (generation === saveGenerationRef.current) {
+        persistInFlightRef.current = false
+      }
     }
-  }, [assignmentLevel, chapterId, hskLevel, studentAssignmentId, totalQuestions])
+  }, [assignmentLevel, chapterId, hskLevel, router, studentAssignmentId, totalQuestions])
+
+  const goToNextQuestion = () => {
+    if (currentQuestionIndex + 1 >= totalQuestions) {
+      void persistAssignmentCompletion(scoreRef.current)
+      setGameState("finished")
+      return
+    }
+
+    setCurrentQuestionIndex((prev) => prev + 1)
+    setInputValue("")
+    setAnswerSubmitted(false)
+    setLastAnswerCorrect(null)
+    inputRef.current?.focus({ preventScroll: true })
+  }
+
+  const restartGame = async () => {
+    if (saveState === "saving" || isRetrying) return
+
+    if (studentAssignmentId) {
+      setIsRetrying(true)
+      setSaveMessage(null)
+      try {
+        const response = await fetch(`/api/student/assignments/${studentAssignmentId}/retry`, {
+          method: "PATCH",
+        })
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}))
+          setSaveMessage(
+            typeof payload.error === "string" ? payload.error : "Failed to restart assignment."
+          )
+          return
+        }
+      } catch {
+        setSaveMessage("Failed to restart assignment.")
+        return
+      } finally {
+        setIsRetrying(false)
+      }
+    }
+
+    saveGenerationRef.current += 1
+    resetLocalGame()
+  }
 
   if (totalQuestions === 0) {
     return <QuestionsUnavailable returnHref={returnHref} />
@@ -514,6 +565,7 @@ export function MandarinTypingGame({
             ) : (
               <Link
                 href={returnHref}
+                onClick={() => router.refresh()}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
               >
                 <Home className="h-4 w-4" />
@@ -521,11 +573,12 @@ export function MandarinTypingGame({
               </Link>
             )}
             <button
-              onClick={restartGame}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              onClick={() => void restartGame()}
+              disabled={saveState === "saving" || isRetrying}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-60"
             >
               <RotateCcw className="h-4 w-4" />
-              Retry
+              {isRetrying ? "Starting..." : "Retry"}
             </button>
           </div>
         </section>

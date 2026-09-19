@@ -75,7 +75,8 @@ export default async function StudentAssignmentPage({
   const chapter = Array.isArray(assignment.chapter) ? assignment.chapter[0] : assignment.chapter;
   if (!chapter) redirect("/student/dashboard");
 
-  if (!row.is_locked && !row.is_completed && !row.started_at) {
+  // Stamp started_at for this run (including retries of already-completed assignments).
+  if (!row.is_locked && !row.started_at) {
     void supabase
       .from("student_assignments")
       .update({ started_at: new Date().toISOString() })
